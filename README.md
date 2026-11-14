@@ -140,3 +140,7 @@ Edit `~/.config/i3/config` to customise. To use the Win key anyway, change `set 
 - **"Display :1 is already in use":** pass another display number, e.g. `./start-i3-wslg.sh 1920x1080 2`.
 - **"Cannot reach an X server"** (option 2): make sure the Windows X server is running, access control is disabled, and the firewall allows it on Public networks.
 - **Black screen over RDP:** make sure `~/.xsession` exists and is executable, and that no other i3 session for your user is already running.
+
+## License
+
+[MIT](LICENSE)
