@@ -36,6 +36,8 @@ chmod +x *.sh
 ./i3-wsl.sh xrdp [PORT]          # option 3
 ./i3-wsl.sh zsh                  # zsh + dark theme (see below)
 ./i3-wsl.sh theme [NAME]         # switch colour theme (see below)
+./i3-wsl.sh polybar [--no-picom] # nicer i3: polybar, autotiling, picom
+./i3-wsl.sh glazewm [--config]   # i3-style tiling for Windows itself
 ./i3-wsl.sh uninstall [--yes]    # remove everything
 ```
 
@@ -148,6 +150,51 @@ One command recolours i3 window borders, the bar, i3status text, Alacritty, xter
 
 You can also pick **Change colour theme** from the `i3-wsl.sh` menu. Running `setup-zsh-dark.sh` again keeps whichever theme you chose.
 
+## Nicer i3: polybar, autotiling, picom
+
+```bash
+./setup-polybar.sh              # everything
+./setup-polybar.sh --no-picom   # without the compositor
+```
+
+- **polybar** replaces the i3 bar. It shows workspaces, the active window title, CPU, RAM, disk and the clock, in your theme's colours. `set-theme.sh` recolours it too.
+- **autotiling:** new windows alternate between side-by-side and stacked, so you don't need to choose a split direction.
+- **picom:** soft shadows, fading and rounded corners. There's no graphics card acceleration in the i3 window or over RDP, so it uses light CPU-only effects. If windows feel slow or turn black, run `pkill picom`, or set up again with `--no-picom`.
+- **Wallpaper:** copy any image to `~/.wallpaper` and press Alt+Shift+r.
+
+Restart the i3 window (or log in again over RDP) after the first run, so picom starts. Uninstall removes all of this and brings back the i3 bar, keeping your theme.
+
+## GlazeWM: i3-style tiling for Windows
+
+With WSLg, Linux apps open as normal Windows windows. [GlazeWM](https://github.com/glzr-io/glazewm) is a tiling window manager for Windows that works like i3, so it can arrange your Linux and Windows apps together without the i3 window or RDP.
+
+Run this from WSL:
+
+```bash
+./setup-glazewm.sh            # install GlazeWM with winget and write its config
+./setup-glazewm.sh --config   # only rewrite the config (e.g. after set-theme.sh)
+```
+
+It writes `%USERPROFILE%\.glzr\glazewm\config.yaml`, with the same Alt shortcuts as i3 here and border colours from your current theme. An existing config is backed up once as `config.yaml.pre-wsl-i3`. Then start GlazeWM from the Start menu.
+
+| Keys | Action |
+| --- | --- |
+| Alt+Enter | Windows Terminal with your WSL shell |
+| Alt+arrows / Alt+h j k l | Move focus |
+| Alt+Shift+arrows | Move window |
+| Alt+1 … Alt+9 | Switch workspace |
+| Alt+Shift+1 … | Move window to workspace |
+| Alt+v | Change the split direction for the next window |
+| Alt+f / Alt+Shift+Space | Fullscreen / floating |
+| Alt+r | Resize mode (arrows, then Enter) |
+| Alt+Shift+q | Close window |
+| Alt+Shift+p | Pause or resume GlazeWM |
+| Alt+Shift+r / Alt+Shift+e | Reload config / quit GlazeWM |
+
+- **Don't use GlazeWM and i3 at the same time.** GlazeWM takes its Alt shortcuts at the Windows level, so they also fire inside the i3 window and RDP. Press **Alt+Shift+P** to pause GlazeWM while you use i3, and again when you're done. GlazeWM leaves the i3 window and Remote Desktop untiled.
+- **If GlazeWM shows a config error,** delete `config.yaml` and restart GlazeWM to get its default config back. Then tell me the error.
+- **To remove it,** run `winget uninstall GlazeWM` in PowerShell. The WSL uninstall script doesn't touch Windows.
+
 ## Uninstall
 
 ```bash
@@ -157,6 +204,7 @@ You can also pick **Change colour theme** from the `i3-wsl.sh` menu. Running `se
 
 You can also pick **Uninstall** from the `i3-wsl.sh` menu. The script:
 
+- Removes polybar, picom and autotiling, and brings back the i3 bar
 - Undoes the zsh + dark theme setup: switches your login shell back to bash first, restores the `.pre-zsh-dark` backups, deletes the downloaded zsh plugins, and removes zsh and Alacritty. It keeps git, since other things use it.
 - Stops and removes xrdp, if it was installed
 - Removes i3, i3status, i3lock, dmenu, rofi and Xephyr

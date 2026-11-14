@@ -31,11 +31,43 @@ installed() {  # print only the given packages that are installed
 CORE_PKGS=(i3 i3-wm i3status i3lock dmenu rofi xserver-xephyr)
 XRDP_PKGS=(xrdp xorgxrdp)
 EXTRA_PKGS=(xinit x11-xserver-utils x11-utils x11-apps xterm feh dbus-x11 fonts-noto-color-emoji)
+POLYBAR_PKGS=(polybar picom autotiling)
 ZSH_PKGS=(zsh zsh-autosuggestions zsh-syntax-highlighting alacritty fonts-jetbrains-mono gnome-themes-extra)
 
 to_remove=()
 
-# 0. zsh + dark theme (setup-zsh-dark.sh)
+# 0a. polybar, picom, autotiling (setup-polybar.sh)
+mapfile -t pb_found < <(installed "${POLYBAR_PKGS[@]}")
+if { [[ ${#pb_found[@]} -gt 0 ]] || [[ -e "$HOME/.config/polybar/.wsl-polybar" ]]; } &&
+   ask "Remove polybar, picom and autotiling (bring back the i3 bar)?"; then
+  rm -f "$HOME/.config/polybar/.wsl-polybar" "$HOME/.local/bin/i3-extras"
+  I3C="$HOME/.config/i3/config"
+  if [[ -f "$I3C" ]]; then
+    sed -i '/^# >>> wsl-polybar >>>/,/^# <<< wsl-polybar <<</d' "$I3C"
+    # Re-apply the theme without polybar, so the i3 bar comes back
+    theme="$(sed -n 's/^# theme: //p' "$I3C" | head -1)"
+    [[ -n "$theme" && -x "$(dirname "$0")/set-theme.sh" ]] && "$(dirname "$0")/set-theme.sh" "$theme" >/dev/null
+  fi
+  for f in "$HOME/.config/polybar/config.ini" "$HOME/.config/picom/picom.conf"; do
+    if [[ -e "$f.pre-zsh-dark" ]]; then
+      mv -f "$f.pre-zsh-dark" "$f"
+    elif [[ -f "$f" ]] && grep -q 'set-theme.sh\|setup-polybar.sh' "$f"; then
+      rm -f "$f"
+    fi
+  done
+  rmdir "$HOME/.config/polybar" "$HOME/.config/picom" 2>/dev/null || true
+  # Stop the polybar/autotiling processes the launcher started (it lists them per display)
+  for pf in "${XDG_RUNTIME_DIR:-/tmp}"/wsl-i3-extras*.pids; do
+    [[ -f "$pf" ]] || continue
+    while read -r pid; do kill "$pid" 2>/dev/null || true; done < "$pf"
+    rm -f "$pf"
+  done
+  pkill -x picom 2>/dev/null || true
+  to_remove+=("${pb_found[@]}")
+  echo "==> polybar setup removed"
+fi
+
+# 0b. zsh + dark theme (setup-zsh-dark.sh)
 MARK='setup-zsh-dark.sh\|wsl-dark-theme'
 login_shell="$(getent passwd "$USER" | cut -d: -f7)"
 mapfile -t zsh_found < <(installed "${ZSH_PKGS[@]}")
