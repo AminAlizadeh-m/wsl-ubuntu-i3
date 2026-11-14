@@ -31,11 +31,15 @@ if [[ ! -f "$CFG_DIR/config" ]]; then
   echo "==> Creating $CFG_DIR/config (modifier = Alt)"
   mkdir -p "$CFG_DIR"
   cp /etc/i3/config "$CFG_DIR/config"
+  # Alt+d: use rofi instead of dmenu. Replace the stock binding rather than
+  # adding a second one, since i3 rejects duplicate keybindings.
+  sed -i -E 's/^bindsym \$mod\+d exec .*dmenu.*/bindsym $mod+d exec --no-startup-id rofi -show drun/' \
+    "$CFG_DIR/config"
+  grep -q 'rofi -show drun' "$CFG_DIR/config" ||
+    echo 'bindsym $mod+d exec --no-startup-id rofi -show drun' >> "$CFG_DIR/config"
   cat >> "$CFG_DIR/config" <<'CFG'
 
 # --- WSL additions ---
-# Alt+d: rofi launcher instead of dmenu
-bindsym Mod1+d exec --no-startup-id rofi -show drun
 # Solid background
 exec --no-startup-id xsetroot -solid "#1e1e2e"
 CFG
