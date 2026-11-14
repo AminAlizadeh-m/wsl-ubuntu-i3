@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Set up zsh as your shell and give i3 a dark theme:
-#   - zsh with autosuggestions, syntax highlighting and a git-aware prompt
+#   - git, and zsh with as-you-type completion (zsh-autocomplete), extra
+#     completions, history suggestions, syntax highlighting, git-aware prompt
 #   - Alacritty terminal on Alt+Enter, with xterm as fallback
 #   - dark GTK apps
 #   - colours for i3, its bar, the terminals and rofi via set-theme.sh
@@ -34,7 +35,7 @@ backup_once() {
 echo "==> Installing zsh, plugins and terminals"
 sudo apt-get update
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
-  zsh zsh-autosuggestions zsh-syntax-highlighting alacritty xterm x11-xserver-utils
+  git zsh zsh-autosuggestions zsh-syntax-highlighting alacritty xterm x11-xserver-utils
 
 # Nice to have; skip any that this Ubuntu release doesn't have.
 for pkg in fonts-jetbrains-mono gnome-themes-extra; do
@@ -44,6 +45,25 @@ for pkg in fonts-jetbrains-mono gnome-themes-extra; do
     echo "    (skipping $pkg: not available)"
   fi
 done
+
+# ---------------------------------------------------------------- zsh plugins (git)
+# Not packaged in Ubuntu, so clone them from GitHub (updated on every run):
+#   zsh-autocomplete: completion menu that appears as you type
+#   zsh-completions:  extra completion definitions for many commands
+ZPLUGINS="$HOME/.local/share/zsh/plugins"
+mkdir -p "$ZPLUGINS"
+get_plugin() {  # get_plugin <name> <git url>
+  local dir="$ZPLUGINS/$1"
+  if [[ -d "$dir/.git" ]]; then
+    echo "==> Updating zsh plugin $1"
+    git -C "$dir" pull -q --ff-only || echo "    (could not update $1, keeping current version)"
+  else
+    echo "==> Downloading zsh plugin $1"
+    git clone -q --depth 1 "$2" "$dir" || echo "    (could not download $1; zsh will work without it)"
+  fi
+}
+get_plugin zsh-autocomplete https://github.com/marlonrichert/zsh-autocomplete.git
+get_plugin zsh-completions  https://github.com/zsh-users/zsh-completions.git
 
 # ---------------------------------------------------------------- zsh
 ZSHRC="$HOME/.zshrc"
@@ -58,19 +78,33 @@ HISTSIZE=50000
 SAVEHIST=50000
 setopt share_history hist_ignore_dups hist_ignore_space extended_history
 
+# Colours for ls and completion lists
+eval "$(dircolors -b)"
+
+# Keys: emacs-style
+bindkey -e
+
 # Completion
-autoload -Uz compinit && compinit
-zstyle ':completion:*' menu select
+ZPLUGINS=~/.local/share/zsh/plugins
+# Extra completion definitions (zsh-completions)
+[[ -d $ZPLUGINS/zsh-completions/src ]] && fpath=($ZPLUGINS/zsh-completions/src $fpath)
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
 zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
-
-# Keys: emacs-style, Up/Down search history by what you've typed
-bindkey -e
-autoload -Uz up-line-or-beginning-search down-line-or-beginning-search
-zle -N up-line-or-beginning-search
-zle -N down-line-or-beginning-search
-bindkey '^[[A' up-line-or-beginning-search
-bindkey '^[[B' down-line-or-beginning-search
+if [[ -r $ZPLUGINS/zsh-autocomplete/zsh-autocomplete.plugin.zsh ]]; then
+  # Completion menu as you type. Tab / Shift+Tab move through it,
+  # Up/Down open a history menu. It runs compinit itself.
+  source $ZPLUGINS/zsh-autocomplete/zsh-autocomplete.plugin.zsh
+else
+  # Without the plugin: normal Tab completion menu, and Up/Down search
+  # history by what you've typed.
+  autoload -Uz compinit && compinit
+  zstyle ':completion:*' menu select
+  autoload -Uz up-line-or-beginning-search down-line-or-beginning-search
+  zle -N up-line-or-beginning-search
+  zle -N down-line-or-beginning-search
+  bindkey '^[[A' up-line-or-beginning-search
+  bindkey '^[[B' down-line-or-beginning-search
+fi
 bindkey '^[[H' beginning-of-line
 bindkey '^[[F' end-of-line
 bindkey '^[[3~' delete-char
@@ -84,13 +118,13 @@ zstyle ':vcs_info:git:*' formats ' %F{magenta}(%b)%f'
 setopt prompt_subst
 PROMPT='%F{blue}%~%f${vcs_info_msg_0_} %(?.%F{green}.%F{red})❯%f '
 
-# Colours and aliases
-eval "$(dircolors -b)"
+# Aliases
 alias ls='ls --color=auto'
 alias ll='ls -lah'
 alias grep='grep --color=auto'
 
-# Plugins (from apt). Syntax highlighting must be loaded last.
+# Suggestions from history as you type (accept with Right arrow or End),
+# and command colouring. Syntax highlighting must be loaded last.
 [[ -r /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]] &&
   source /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh
 ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=8'   # dim colour from the terminal theme
