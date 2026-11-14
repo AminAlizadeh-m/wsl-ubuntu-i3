@@ -6,23 +6,35 @@
 #   --monitor N        use monitor N (1, 2, ... as listed by --monitors)
 #   --monitor largest  use the biggest monitor
 #   --monitors         list your monitors and exit
+#   --windows N        one i3 spread over N windows (2-4); i3 treats each window
+#                      as a monitor. Window 1 goes on your primary monitor, the
+#                      others on your other monitors (or side by side if you
+#                      have fewer monitors than windows).
 #   Without --monitor, your primary Windows monitor is used.
 #   e.g. ./start-i3-wslg.sh full --monitor 2
 #        ./start-i3-wslg.sh full --monitor largest
+#        ./start-i3-wslg.sh full --windows 2
 #        ./start-i3-wslg.sh 2560x1440 2
 set -euo pipefail
 
-MODE="auto"; DNUM="1"; MONITOR=""; LIST=0
+MODE="auto"; DNUM="1"; MONITOR=""; LIST=0; WINDOWS=1
 pos=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --monitor)   MONITOR="${2:?--monitor needs a number or 'largest'}"; shift ;;
     --monitor=*) MONITOR="${1#*=}" ;;
     --monitors)  LIST=1 ;;
+    --windows)   WINDOWS="${2:?--windows needs a number}"; shift ;;
+    --windows=*) WINDOWS="${1#*=}" ;;
     *) if [[ $pos -eq 0 ]]; then MODE="$1"; else DNUM="$1"; fi; pos=$((pos + 1)) ;;
   esac
   shift
 done
+
+if ! [[ "$WINDOWS" =~ ^[1-4]$ ]]; then
+  echo "--windows must be 1, 2, 3 or 4." >&2
+  exit 1
+fi
 
 if [[ -z "${DISPLAY:-}" ]]; then
   echo "DISPLAY is not set; WSLg does not seem to be running." >&2
@@ -112,15 +124,11 @@ if display_alive; then
 fi
 clean_stale
 
-echo "==> Starting Xephyr on :$DNUM ($SIZE$([[ $FULLSCREEN -eq 1 ]] && echo ', fullscreen')${MON_OUTPUT:+ on $MON_OUTPUT})  -- press Ctrl+Shift to grab/release keyboard"
-echo "    Moving the window to another monitor? Maximize it there and i3 resizes,"
-echo "    or start on that monitor:  $0 full --monitor N   (list: $0 --monitors)"
-
-# start_xephyr <extra args...>: start Xephyr and wait until it really answers.
+# start_xephyr <screen args...>: start Xephyr and wait until it really answers.
 start_xephyr() {
   # -noreset: keep running (and keep the keyboard setup) when a short-lived
   # client like xdpyinfo or setxkbmap disconnects. The EXIT trap stops Xephyr.
-  Xephyr ":$DNUM" -screen "$SIZE" "$@" -resizeable -ac -br -noreset \
+  Xephyr ":$DNUM" "$@" -ac -br -noreset \
     -title "i3 (WSL)" >"/tmp/xephyr-$DNUM.log" 2>&1 &
   XPID=$!
   for _ in $(seq 1 100); do
@@ -132,11 +140,66 @@ start_xephyr() {
   return 1
 }
 
-XARGS=()
-# Fullscreen on the primary monitor: Xephyr can do that itself. On another
-# monitor, open a normal window first, move it there, then make it fullscreen
-# (Xephyr's own -output option crashes under WSLg).
-[[ $FULLSCREEN -eq 1 && $OTHER_MONITOR -eq 0 ]] && XARGS=(-fullscreen)
+# Where to move each window after it opens (left empty when nothing to move)
+WIN_X=(); WIN_Y=(); WIN_FULL=()
+
+# ---------------------------------------------------------------- one window
+if [[ $WINDOWS -eq 1 ]]; then
+  echo "==> Starting Xephyr on :$DNUM ($SIZE$([[ $FULLSCREEN -eq 1 ]] && echo ', fullscreen')${MON_OUTPUT:+ on $MON_OUTPUT})  -- press Ctrl+Shift to grab/release keyboard"
+  echo "    Moving the window to another monitor? Maximize it there and i3 resizes,"
+  echo "    or start on that monitor:  $0 full --monitor N   (list: $0 --monitors)"
+
+  XARGS=(-screen "$SIZE" -resizeable)
+  # Fullscreen on the primary monitor: Xephyr can do that itself. On another
+  # monitor, open a normal window first, move it there, then make it fullscreen
+  # (Xephyr's own -output option crashes under WSLg).
+  [[ $FULLSCREEN -eq 1 && $OTHER_MONITOR -eq 0 ]] && XARGS+=(-fullscreen)
+  if [[ $OTHER_MONITOR -eq 1 ]]; then
+    WIN_X=("${MON_X:-0}"); WIN_Y=("${MON_Y:-0}"); WIN_FULL=("$FULLSCREEN")
+  fi
+
+# ---------------------------------------------------------------- several windows
+# One X screen made of several windows (Xinerama); i3 sees each window as a
+# monitor. Window 1 goes on the primary monitor, the next ones on the other
+# monitors; windows that share a monitor are placed side by side.
+else
+  [[ -n "$MONITOR" ]] && echo "    (--monitor is ignored with --windows: windows are spread over your monitors.)"
+  mapfile -t MONS < <(list_monitors | awk '$4 == 1'; list_monitors | awk '$4 != 1')
+  [[ ${#MONS[@]} -eq 0 ]] && MONS=("1 $MON_SIZE ? 1 0 0")
+  XARGS=(); WIN_X=(); WIN_Y=(); WIN_FULL=(); DESC=()
+  for ((k = 0; k < WINDOWS; k++)); do
+    # Which monitor, and how many windows share it
+    if (( k < ${#MONS[@]} )); then m=$k; else m=0; fi
+    if (( m == 0 )); then
+      share=$(( WINDOWS > ${#MONS[@]} ? WINDOWS - ${#MONS[@]} + 1 : 1 ))
+      idx=$(( k == 0 ? 0 : k - ${#MONS[@]} + 1 ))
+    else
+      share=1; idx=0
+    fi
+    read -r _ msize mout _ mx my <<<"${MONS[$m]}"
+    read -r mw mh < <(tr 'x' ' ' <<<"$msize")
+    full=0
+    case "$MODE" in
+      full|fullscreen)
+        if (( share == 1 )); then w=$mw; h=$mh; x=$mx; y=$my; full=1
+        else w=$(( mw / share )); h=$mh; x=$(( mx + idx * w )); y=$my; fi ;;
+      auto)
+        w=$(( mw * 9 / 10 / share )); h=$(( mh * 9 / 10 ))
+        x=$(( mx + mw / 20 + idx * w )); y=$(( my + mh / 20 )) ;;
+      *)
+        read -r w h < <(tr 'x' ' ' <<<"$SIZE")
+        x=$(( mx + idx * w )); y=$my ;;
+    esac
+    XARGS+=(-screen "${w}x${h}")
+    WIN_X+=("$x"); WIN_Y+=("$y"); WIN_FULL+=("$full")
+    note=""; [[ $full -eq 1 ]] && note=", fullscreen"
+    DESC+=("$((k + 1)): ${w}x${h} on $mout$note")
+  done
+  XARGS+=(+xinerama)
+  echo "==> Starting Xephyr on :$DNUM with $WINDOWS windows  -- press Ctrl+Shift to grab/release keyboard"
+  printf '    window %s\n' "${DESC[@]}"
+  echo "    Alt+o: focus the next window   Alt+Shift+o: move a window there   Alt+Ctrl+o: move the workspace"
+fi
 
 if ! start_xephyr "${XARGS[@]}"; then
   echo "Xephyr failed to start. Log:" >&2
@@ -149,19 +212,32 @@ WATCH_PID=""
 # the trap early and leave the Xephyr window open.
 trap 'kill $WATCH_PID 2>/dev/null || true; kill "$XPID" 2>/dev/null && wait "$XPID" 2>/dev/null || true; clean_stale || true' EXIT
 
-# Move the window to the chosen monitor (and make it fullscreen there).
-if [[ $OTHER_MONITOR -eq 1 ]]; then
-  if command -v xdotool >/dev/null 2>&1 &&
-     WID=$(timeout 5 xdotool search --sync --name '^i3 \(WSL\)$' 2>/dev/null | head -1) &&
-     [[ -n "$WID" ]]; then
-    xdotool windowmove "$WID" "${MON_X:-0}" "${MON_Y:-0}" 2>/dev/null || true
-    if [[ $FULLSCREEN -eq 1 ]]; then
+# Move each window into place (and make it fullscreen there). Xephyr creates
+# its windows in screen order, so sorting the window ids gives window 1, 2, ...
+if [[ ${#WIN_X[@]} -gt 0 ]]; then
+  if command -v xdotool >/dev/null 2>&1; then
+    WIDS=()
+    for _ in $(seq 1 50); do
+      mapfile -t WIDS < <(xdotool search --name '^i3 \(WSL\)$' 2>/dev/null | sort -n)
+      (( ${#WIDS[@]} >= ${#WIN_X[@]} )) && break
+      sleep 0.1
+    done
+    if (( ${#WIDS[@]} >= ${#WIN_X[@]} )); then
+      for ((k = 0; k < ${#WIN_X[@]}; k++)); do
+        xdotool windowmove "${WIDS[$k]}" "${WIN_X[$k]}" "${WIN_Y[$k]}" 2>/dev/null || true
+      done
       sleep 0.3
-      xdotool windowstate --add FULLSCREEN "$WID" 2>/dev/null ||
-        echo "    (Couldn't make it fullscreen; maximize the window instead.)"
+      for ((k = 0; k < ${#WIN_X[@]}; k++)); do
+        if [[ ${WIN_FULL[$k]} -eq 1 ]]; then
+          xdotool windowstate --add FULLSCREEN "${WIDS[$k]}" 2>/dev/null ||
+            echo "    (Couldn't make window $((k + 1)) fullscreen; maximize it instead.)"
+        fi
+      done
+    else
+      echo "    (Couldn't find the windows to move them; drag them where you want them.)"
     fi
   else
-    echo "    (Couldn't move the window automatically; drag it to $MON_OUTPUT and maximize it.)"
+    echo "    (xdotool missing, so the windows can't be moved automatically: sudo apt install xdotool)"
   fi
 fi
 
@@ -200,4 +276,14 @@ if command -v xdotool >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1 && [
 fi
 
 echo "==> Launching i3 (modifier is Alt; Alt+Enter = terminal, Alt+Shift+e = exit)"
-DISPLAY=":$DNUM" WAYLAND_DISPLAY= dbus-launch --exit-with-session i3
+I3_ARGS=()
+# With several windows RandR reports only one monitor, so i3 must read the
+# window layout from Xinerama instead.
+if [[ $WINDOWS -gt 1 ]]; then
+  I3_ARGS=(--force-xinerama)
+  # i3 warns about Xinerama on every start; here it's expected, so hide that line
+  { DISPLAY=":$DNUM" WAYLAND_DISPLAY= dbus-launch --exit-with-session i3 "${I3_ARGS[@]}" 2>&1; } |
+    { grep -v --line-buffered 'Using Xinerama instead of RandR' || true; }
+else
+  DISPLAY=":$DNUM" WAYLAND_DISPLAY= dbus-launch --exit-with-session i3
+fi

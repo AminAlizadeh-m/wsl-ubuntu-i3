@@ -93,6 +93,11 @@ bindsym $mod+Shift+Right  move right
 # Focus the parent container
 bindsym $mod+a focus parent
 
+# Several i3 windows (start-i3-wslg.sh --windows 2): each window is a "monitor"
+bindsym $mod+o       focus output next
+bindsym $mod+Shift+o move container to output next
+bindsym $mod+Ctrl+o  move workspace to output next
+
 # ---------------------------------------------------------------- layout
 
 # Where the next window opens: beside (h) or below (v) the current one

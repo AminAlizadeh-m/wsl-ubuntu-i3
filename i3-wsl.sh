@@ -3,7 +3,7 @@
 # or pass it directly:
 #   ./i3-wsl.sh                      interactive menu
 #   ./i3-wsl.sh install [--config]   install i3 (--config: only update the i3 config)
-#   ./i3-wsl.sh wslg [auto|full|WxH] [--monitor N|largest]  i3 in a window via WSLg
+#   ./i3-wsl.sh wslg [auto|full|WxH] [--monitor N|largest] [--windows N]  i3 via WSLg
 #   ./i3-wsl.sh xserver [DISP]       full screen via VcXsrv/X410
 #   ./i3-wsl.sh xrdp [PORT]          full desktop via Remote Desktop
 #   ./i3-wsl.sh zsh                  zsh + dark theme for i3
@@ -61,8 +61,13 @@ case "${choice:-1}" in
   1)
     read -rp "Window size: auto (90% of monitor), full, or WIDTHxHEIGHT [auto]: " size
     "$DIR/start-i3-wslg.sh" --monitors 2>/dev/null || true
-    read -rp "Monitor: number, 'largest', or Enter for your primary monitor: " mon
-    run_method wslg "${size:-auto}" ${mon:+--monitor "$mon"}
+    read -rp "How many i3 windows (1-4; 2+ = one i3 spread over several windows) [1]: " wins
+    if [[ "${wins:-1}" == 1 ]]; then
+      read -rp "Monitor: number, 'largest', or Enter for your primary monitor: " mon
+      run_method wslg "${size:-auto}" ${mon:+--monitor "$mon"}
+    else
+      run_method wslg "${size:-auto}" --windows "$wins"
+    fi
     ;;
   2)
     read -rp "X server display number [0]: " disp

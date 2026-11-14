@@ -31,7 +31,7 @@ chmod +x *.sh
 
 ```bash
 ./i3-wsl.sh install [--config]   # install i3 (--config: only update the i3 config)
-./i3-wsl.sh wslg [auto|full|WxH] [--monitor N|largest]   # option 1, e.g. ./i3-wsl.sh wslg full --monitor 2
+./i3-wsl.sh wslg [auto|full|WxH] [--monitor N|largest] [--windows N]   # option 1, e.g. ./i3-wsl.sh wslg full --windows 2
 ./i3-wsl.sh xserver [DISP]       # option 2
 ./i3-wsl.sh xrdp [PORT]          # option 3
 ./i3-wsl.sh zsh                  # zsh + dark theme (see below)
@@ -78,6 +78,12 @@ The config lives in the repo as [config/i3/config](config/i3/config), organised 
 ./start-i3-wslg.sh full --monitor largest  # fullscreen on your biggest monitor
 ```
 
+- **One i3 over several windows:** `--windows 2` (up to 4) opens i3 as several windows that i3 treats like separate monitors, each with its own workspace. Window 1 goes on your primary monitor and the others on your other monitors, fullscreen with `full`. With fewer monitors than windows, the extra ones sit side by side. Move between them with **Alt+o** (focus the next window), **Alt+Shift+o** (send the current window there) and **Alt+Ctrl+o** (send the whole workspace).
+  ```bash
+  ./start-i3-wslg.sh full --windows 2   # one i3, fullscreen on each of two monitors
+  ./start-i3-wslg.sh auto --windows 2   # two windows; side by side if you have one monitor
+  ```
+  In this mode the windows can't be resized after they open (i3's layout is fixed at start), and polybar only shows in window 1; the i3 bar shows in all of them.
 - **Multiple monitors:** i3's screen size is set when it starts, from your primary monitor unless you choose with `--monitor`. If you drag the window to a monitor with a different size, **maximize it there** (double-click the title bar) and i3 resizes to fit. Fullscreen windows can't be resized that way, so for those, quit i3 (Alt+Shift+e) and start it again with `--monitor`.
 
 - The monitor size comes from WSLg (`xrandr`). You can also resize or maximize the window afterwards, and i3 adapts to the new size.
@@ -235,6 +241,7 @@ The modifier is **Alt**, not the Win key, because Windows takes most Win-key sho
 | Alt+f | Fullscreen |
 | Alt+Shift+Space / Alt+Space | Float or tile a window / switch focus between them |
 | Alt+Shift+- / Alt+- | Park a window in the scratchpad / bring it back |
+| Alt+o / Alt+Shift+o / Alt+Ctrl+o | With `--windows`: focus the next window / move a window there / move the workspace there |
 | Alt+r | Resize mode (arrows, then Enter) |
 | Alt+Shift+c / Alt+Shift+r | Reload config / restart i3 |
 | Alt+Shift+e | Exit i3 |
