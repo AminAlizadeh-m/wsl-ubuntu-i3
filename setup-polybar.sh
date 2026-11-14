@@ -53,6 +53,18 @@ if command -v autotiling >/dev/null 2>&1; then
   autotiling >/dev/null 2>&1 &
   echo $! >> "$pidfile"
 fi
+# picom: only one compositor per display can run. Something else may already
+# have started one (e.g. the stock i3 config's "dex --autostart" runs picom's
+# autostart entry), so wait a moment and only start it if none is running here.
+if [ -f "$HOME/.config/picom/.wsl-picom" ] && command -v picom >/dev/null 2>&1; then
+  (
+    sleep 2
+    for pid in $(pgrep -u "$(id -u)" -x picom); do
+      tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null | grep -qx "DISPLAY=$DISPLAY" && exit 0
+    done
+    exec picom --config "$HOME/.config/picom/picom.conf" >/dev/null 2>&1
+  ) &
+fi
 # Wallpaper (after the theme has set the plain background colour)
 if [ -f "$HOME/.wallpaper" ]; then
   (sleep 1; feh --no-fehbg --bg-fill "$HOME/.wallpaper") &
@@ -61,6 +73,7 @@ EOF
 chmod +x "$LAUNCHER"
 
 # ---------------------------------------------------------------- picom
+rm -f "$HOME/.config/picom/.wsl-picom"
 if [[ $USE_PICOM -eq 1 ]]; then
   PICOM_CFG="$HOME/.config/picom/picom.conf"
   mkdir -p "$(dirname "$PICOM_CFG")"
@@ -90,6 +103,8 @@ rounded-corners-exclude = [ "class_g = 'Polybar'" ];
 EOF
 fi
 
+[[ $USE_PICOM -eq 1 ]] && touch "$HOME/.config/picom/.wsl-picom"
+
 # ---------------------------------------------------------------- i3
 echo "==> Updating $I3_CFG"
 [[ ! -e "$I3_CFG.pre-zsh-dark" ]] && ! grep -q 'wsl-dark-theme' "$I3_CFG" && cp -a "$I3_CFG" "$I3_CFG.pre-zsh-dark"
@@ -99,7 +114,6 @@ sed '/^# >>> wsl-polybar >>>/,/^# <<< wsl-polybar <<</d' "$I3_CFG" > "$TMP_CFG"
   echo "# >>> wsl-polybar >>>"
   echo "# Added by setup-polybar.sh. Re-running it replaces this block."
   echo "exec_always --no-startup-id $LAUNCHER"
-  [[ $USE_PICOM -eq 1 ]] && echo "exec --no-startup-id picom --config $HOME/.config/picom/picom.conf"
   echo "# <<< wsl-polybar <<<"
 } >> "$TMP_CFG"
 if command -v i3 >/dev/null && ! i3 -C -c "$TMP_CFG" >/dev/null 2>&1; then
@@ -120,7 +134,7 @@ THEME="$(sed -n 's/^# theme: //p' "$I3_CFG" | head -1)"
 
 echo
 echo "Done. polybar, autotiling$([[ $USE_PICOM -eq 1 ]] && echo ', picom') are set up."
-echo "  - Restart the i3 window (or log in again over RDP) to start picom."
+echo "  - Press Alt+Shift+r in i3 to start them."
 echo "  - Wallpaper: copy an image to ~/.wallpaper, then press Alt+Shift+r."
 [[ $USE_PICOM -eq 1 ]] && echo "  - If windows feel slow or go black: pkill picom (or re-run with --no-picom)."
 exit 0

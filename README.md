@@ -162,7 +162,7 @@ You can also pick **Change colour theme** from the `i3-wsl.sh` menu. Running `se
 - **picom:** soft shadows, fading and rounded corners. There's no graphics card acceleration in the i3 window or over RDP, so it uses light CPU-only effects. If windows feel slow or turn black, run `pkill picom`, or set up again with `--no-picom`.
 - **Wallpaper:** copy any image to `~/.wallpaper` and press Alt+Shift+r.
 
-Restart the i3 window (or log in again over RDP) after the first run, so picom starts. Uninstall removes all of this and brings back the i3 bar, keeping your theme.
+Press Alt+Shift+r in i3 after the first run to start them. Uninstall removes all of this and brings back the i3 bar, keeping your theme.
 
 ## GlazeWM: i3-style tiling for Windows
 

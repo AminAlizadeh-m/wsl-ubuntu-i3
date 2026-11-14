@@ -40,7 +40,7 @@ to_remove=()
 mapfile -t pb_found < <(installed "${POLYBAR_PKGS[@]}")
 if { [[ ${#pb_found[@]} -gt 0 ]] || [[ -e "$HOME/.config/polybar/.wsl-polybar" ]]; } &&
    ask "Remove polybar, picom and autotiling (bring back the i3 bar)?"; then
-  rm -f "$HOME/.config/polybar/.wsl-polybar" "$HOME/.local/bin/i3-extras"
+  rm -f "$HOME/.config/polybar/.wsl-polybar" "$HOME/.config/picom/.wsl-picom" "$HOME/.local/bin/i3-extras"
   I3C="$HOME/.config/i3/config"
   if [[ -f "$I3C" ]]; then
     sed -i '/^# >>> wsl-polybar >>>/,/^# <<< wsl-polybar <<</d' "$I3C"
