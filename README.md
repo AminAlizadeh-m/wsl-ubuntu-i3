@@ -34,6 +34,7 @@ chmod +x *.sh
 ./i3-wsl.sh wslg [auto|full|WxH] # option 1, e.g. ./i3-wsl.sh wslg full
 ./i3-wsl.sh xserver [DISP]       # option 2
 ./i3-wsl.sh xrdp [PORT]          # option 3
+./i3-wsl.sh zsh                  # zsh + dark theme (see below)
 ./i3-wsl.sh uninstall [--yes]    # remove everything
 ```
 
@@ -101,6 +102,25 @@ Log in with your Linux username and password, and choose the **Xorg** session.
 - If `localhost` doesn't connect, use the WSL IP address that the script prints.
 - The script writes `~/.xsession` so that RDP logins start i3.
 
+## Zsh and dark theme
+
+```bash
+./setup-zsh-dark.sh
+```
+
+Run this after i3 is installed (or pick **Zsh + dark theme** from the `i3-wsl.sh` menu). It sets up:
+
+- **zsh** as your login shell, with autosuggestions, syntax highlighting, shared history, menu completion and a prompt showing the folder, git branch, and a red arrow after a failed command
+- **Alacritty** as the Alt+Enter terminal, in dark colours. Xephyr and xrdp have no GPU, so it runs with software rendering, and falls back to a dark-themed xterm if it can't start
+- **Dark i3:** window borders, a bar at the top, small gaps between windows and the JetBrains Mono font (if available)
+- **Dark rofi** launcher (Alt+d) and dark GTK apps
+
+Then press **Alt+Shift+r** in i3 to load it.
+
+- `chsh` asks for your Linux password. Changing the login shell also changes what Windows Terminal's Ubuntu tab and `wsl` open, so reopen them to get zsh.
+- Files it replaces are backed up once as `<file>.pre-zsh-dark`: `~/.zshrc`, `~/.Xresources`, `~/.config/i3/config`, and the Alacritty and rofi configs.
+- It's safe to run again. Its i3 settings live between `# >>> wsl-dark-theme >>>` markers and are replaced, not duplicated. Put your own i3 changes outside those markers.
+
 ## Uninstall
 
 ```bash
@@ -110,6 +130,7 @@ Log in with your Linux username and password, and choose the **Xorg** session.
 
 You can also pick **Uninstall** from the `i3-wsl.sh` menu. The script:
 
+- Undoes the zsh + dark theme setup: switches your login shell back to bash first, restores the `.pre-zsh-dark` backups, and removes zsh and Alacritty
 - Stops and removes xrdp, if it was installed
 - Removes i3, i3status, i3lock, dmenu, rofi and Xephyr
 - Asks separately before removing general X tools (xterm, feh, x11-apps and others), since other Linux GUI apps may use them

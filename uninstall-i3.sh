@@ -31,8 +31,51 @@ installed() {  # print only the given packages that are installed
 CORE_PKGS=(i3 i3-wm i3status i3lock dmenu rofi xserver-xephyr)
 XRDP_PKGS=(xrdp xorgxrdp)
 EXTRA_PKGS=(xinit x11-xserver-utils x11-utils x11-apps xterm feh dbus-x11 fonts-noto-color-emoji)
+ZSH_PKGS=(zsh zsh-autosuggestions zsh-syntax-highlighting alacritty fonts-jetbrains-mono gnome-themes-extra)
 
 to_remove=()
+
+# 0. zsh + dark theme (setup-zsh-dark.sh)
+MARK='setup-zsh-dark.sh\|wsl-dark-theme'
+login_shell="$(getent passwd "$USER" | cut -d: -f7)"
+mapfile -t zsh_found < <(installed "${ZSH_PKGS[@]}")
+if { [[ ${#zsh_found[@]} -gt 0 ]] || [[ -e "$HOME/.local/bin/i3-term" ]]; } &&
+   ask "Undo the zsh + dark theme setup (and remove zsh, Alacritty)?"; then
+  remove_zsh=1
+  # The login shell must not point at zsh once zsh is gone, or WSL can't open a shell.
+  if [[ "$login_shell" == */zsh ]]; then
+    echo "==> Switching your login shell back to bash (enter your Linux password if asked)"
+    if ! chsh -s /bin/bash; then
+      echo "    chsh failed, so zsh will NOT be removed. Run 'chsh -s /bin/bash' and try again." >&2
+      remove_zsh=0
+    fi
+  fi
+
+  # Put back the files we replaced, or remove the ones we created.
+  for f in "$HOME/.zshrc" "$HOME/.config/alacritty/alacritty.toml" \
+           "$HOME/.config/rofi/config.rasi" "$HOME/.Xresources" "$HOME/.config/i3/config"; do
+    if [[ -e "$f.pre-zsh-dark" ]]; then
+      mv -f "$f.pre-zsh-dark" "$f"
+      echo "==> Restored $f"
+    elif [[ -f "$f" ]] && grep -q "$MARK" "$f"; then
+      case "$f" in
+        */.Xresources) sed -i '/^! >>> wsl-dark-theme >>>/,/^! <<< wsl-dark-theme <<</d' "$f" ;;
+        */i3/config)   sed -i '/^# >>> wsl-dark-theme >>>/,/^# <<< wsl-dark-theme <<</d' "$f" ;;
+        *)             rm -f "$f" ;;
+      esac
+      echo "==> Removed dark-theme settings from $f"
+    fi
+  done
+  rm -f "$HOME/.local/bin/i3-term"
+  for v in 3.0 4.0; do
+    g="$HOME/.config/gtk-$v/settings.ini"
+    if [[ -f "$g" ]] && [[ $(grep -cv 'Settings\]\|prefer-dark-theme\|Adwaita-dark' "$g") -eq 0 ]]; then
+      rm -f "$g"
+    fi
+  done
+
+  [[ $remove_zsh -eq 1 ]] && to_remove+=("${zsh_found[@]}")
+fi
 
 # 1. xrdp (option 3)
 mapfile -t xrdp_found < <(installed "${XRDP_PKGS[@]}")
