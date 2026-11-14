@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 # Make i3 look less basic:
-#   - polybar instead of i3bar (workspaces, window title, CPU, RAM, disk, clock)
+#   - polybar instead of i3bar (workspaces, window title, CPU, RAM, disk, clock;
+#     skip with --no-polybar to keep i3's own bar)
 #   - autotiling: new windows alternate between side-by-side and stacked splits
 #   - picom: shadows, fading and rounded corners (skip with --no-picom)
 #   - optional wallpaper: put an image at ~/.wallpaper
 # Colours follow your theme; switch with ./set-theme.sh <theme>.
 #
-# Usage: ./setup-polybar.sh [--no-picom]
+# Usage: ./setup-polybar.sh [--no-polybar] [--no-picom]
+#   Re-run with different options to change your mind; e.g. --no-polybar
+#   switches back to the i3 bar and keeps autotiling and picom.
 set -euo pipefail
 
 if [[ $EUID -eq 0 ]]; then
@@ -22,10 +25,18 @@ if [[ ! -f "$I3_CFG" ]]; then
 fi
 
 USE_PICOM=1
-[[ "${1:-}" == "--no-picom" ]] && USE_PICOM=0
+USE_POLYBAR=1
+for arg in "$@"; do
+  case "$arg" in
+    --no-picom)   USE_PICOM=0 ;;
+    --no-polybar) USE_POLYBAR=0 ;;
+    *) echo "Unknown option: $arg (use --no-polybar and/or --no-picom)" >&2; exit 1 ;;
+  esac
+done
 
 # ---------------------------------------------------------------- packages
-PKGS=(polybar autotiling feh)
+PKGS=(autotiling feh)
+[[ $USE_POLYBAR -eq 1 ]] && PKGS+=(polybar)
 [[ $USE_PICOM -eq 1 ]] && PKGS+=(picom)
 echo "==> Installing ${PKGS[*]}"
 sudo apt-get update
@@ -40,15 +51,18 @@ mkdir -p "$(dirname "$LAUNCHER")"
 echo "==> Writing $LAUNCHER"
 cat > "$LAUNCHER" <<'EOF'
 #!/bin/sh
-# Start polybar and autotiling for this i3 session (from setup-polybar.sh).
+# Start polybar (if enabled), autotiling and picom for this i3 session
+# (from setup-polybar.sh).
 run_dir="${XDG_RUNTIME_DIR:-/tmp}"
 pidfile="$run_dir/wsl-i3-extras$(printf '%s' "$DISPLAY" | tr -c 'A-Za-z0-9' '_').pids"
 if [ -f "$pidfile" ]; then
   while read -r pid; do kill "$pid" 2>/dev/null; done < "$pidfile"
 fi
 : > "$pidfile"
-polybar main >/dev/null 2>&1 &
-echo $! >> "$pidfile"
+if [ -f "$HOME/.config/polybar/.wsl-polybar" ] && command -v polybar >/dev/null 2>&1; then
+  polybar main >/dev/null 2>&1 &
+  echo $! >> "$pidfile"
+fi
 if command -v autotiling >/dev/null 2>&1; then
   autotiling >/dev/null 2>&1 &
   echo $! >> "$pidfile"
@@ -126,14 +140,19 @@ cat "$TMP_CFG" > "$I3_CFG"
 rm -f "$TMP_CFG"
 
 # ---------------------------------------------------------------- colours
-# The flag tells set-theme.sh to write polybar's config and hide i3bar.
-mkdir -p "$HOME/.config/polybar"
-touch "$HOME/.config/polybar/.wsl-polybar"
+# The flag tells set-theme.sh to write polybar's config and hide i3bar, and the
+# launcher to start polybar. Without it, set-theme.sh brings back the i3 bar.
+if [[ $USE_POLYBAR -eq 1 ]]; then
+  mkdir -p "$HOME/.config/polybar"
+  touch "$HOME/.config/polybar/.wsl-polybar"
+else
+  rm -f "$HOME/.config/polybar/.wsl-polybar"
+fi
 THEME="$(sed -n 's/^# theme: //p' "$I3_CFG" | head -1)"
 "$DIR/set-theme.sh" "${THEME:-tokyonight}"
 
 echo
-echo "Done. polybar, autotiling$([[ $USE_PICOM -eq 1 ]] && echo ', picom') are set up."
+echo "Done. $([[ $USE_POLYBAR -eq 1 ]] && echo 'polybar' || echo 'i3 bar'), autotiling$([[ $USE_PICOM -eq 1 ]] && echo ', picom') are set up."
 echo "  - Press Alt+Shift+r in i3 to start them."
 echo "  - Wallpaper: copy an image to ~/.wallpaper, then press Alt+Shift+r."
 [[ $USE_PICOM -eq 1 ]] && echo "  - If windows feel slow or go black: pkill picom (or re-run with --no-picom)."

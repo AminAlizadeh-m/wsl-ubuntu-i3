@@ -8,7 +8,7 @@
 #   ./i3-wsl.sh xrdp [PORT]          full desktop via Remote Desktop
 #   ./i3-wsl.sh zsh                  zsh + dark theme for i3
 #   ./i3-wsl.sh theme [NAME]         switch colour theme
-#   ./i3-wsl.sh polybar [--no-picom] polybar, autotiling, picom
+#   ./i3-wsl.sh polybar [OPTIONS]    polybar, autotiling, picom (--no-polybar, --no-picom)
 #   ./i3-wsl.sh glazewm [--config]   i3-style tiling for Windows itself
 #   ./i3-wsl.sh uninstall [--yes]    remove everything again
 set -euo pipefail

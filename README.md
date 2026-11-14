@@ -36,7 +36,7 @@ chmod +x *.sh
 ./i3-wsl.sh xrdp [PORT]          # option 3
 ./i3-wsl.sh zsh                  # zsh + dark theme (see below)
 ./i3-wsl.sh theme [NAME]         # switch colour theme (see below)
-./i3-wsl.sh polybar [--no-picom] # nicer i3: polybar, autotiling, picom
+./i3-wsl.sh polybar [OPTIONS]    # nicer i3: polybar, autotiling, picom
 ./i3-wsl.sh glazewm [--config]   # i3-style tiling for Windows itself
 ./i3-wsl.sh uninstall [--yes]    # remove everything
 ```
@@ -153,9 +153,12 @@ You can also pick **Change colour theme** from the `i3-wsl.sh` menu. Running `se
 ## Nicer i3: polybar, autotiling, picom
 
 ```bash
-./setup-polybar.sh              # everything
-./setup-polybar.sh --no-picom   # without the compositor
+./setup-polybar.sh                # everything
+./setup-polybar.sh --no-polybar   # keep the i3 bar, add autotiling and picom
+./setup-polybar.sh --no-picom     # without the compositor
 ```
+
+Run it again with different options whenever you change your mind. For example, `--no-polybar` switches back to the i3 bar (in your theme colours) and keeps autotiling and picom.
 
 - **polybar** replaces the i3 bar. It shows workspaces, the active window title, CPU, RAM, disk and the clock, in your theme's colours. `set-theme.sh` recolours it too.
 - **autotiling:** new windows alternate between side-by-side and stacked, so you don't need to choose a split direction.
