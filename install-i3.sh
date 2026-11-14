@@ -35,6 +35,8 @@ if [[ ! -f "$CFG_DIR/config" ]]; then
   # adding a second one, since i3 rejects duplicate keybindings.
   sed -i -E 's/^bindsym \$mod\+d exec .*dmenu.*/bindsym $mod+d exec --no-startup-id rofi -show drun/' \
     "$CFG_DIR/config"
+  # WSL has no NetworkManager or login sessions, so these just log errors.
+  sed -i -E 's/^(exec .*(nm-applet|xss-lock).*)/# \1  # disabled on WSL/' "$CFG_DIR/config"
   grep -q 'rofi -show drun' "$CFG_DIR/config" ||
     echo 'bindsym $mod+d exec --no-startup-id rofi -show drun' >> "$CFG_DIR/config"
   cat >> "$CFG_DIR/config" <<'CFG'
