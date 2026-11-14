@@ -3,7 +3,7 @@
 # or pass it directly:
 #   ./i3-wsl.sh                      interactive menu
 #   ./i3-wsl.sh install              install i3 only
-#   ./i3-wsl.sh wslg [SIZE] [DISP]   i3 in a window via WSLg
+#   ./i3-wsl.sh wslg [auto|full|WxH] i3 in a window via WSLg
 #   ./i3-wsl.sh xserver [DISP]       full screen via VcXsrv/X410
 #   ./i3-wsl.sh xrdp [PORT]          full desktop via Remote Desktop
 #   ./i3-wsl.sh uninstall [--yes]    remove everything again
@@ -50,8 +50,8 @@ MENU
 read -rp "Choice [1]: " choice
 case "${choice:-1}" in
   1)
-    read -rp "Window size [1920x1080]: " size
-    run_method wslg "${size:-1920x1080}"
+    read -rp "Window size: auto (90% of monitor), full, or WIDTHxHEIGHT [auto]: " size
+    run_method wslg "${size:-auto}"
     ;;
   2)
     read -rp "X server display number [0]: " disp

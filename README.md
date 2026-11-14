@@ -31,7 +31,7 @@ chmod +x *.sh
 
 ```bash
 ./i3-wsl.sh install              # install i3 only
-./i3-wsl.sh wslg [SIZE] [DISP]   # option 1, e.g. ./i3-wsl.sh wslg 2560x1440
+./i3-wsl.sh wslg [auto|full|WxH] # option 1, e.g. ./i3-wsl.sh wslg full
 ./i3-wsl.sh xserver [DISP]       # option 2
 ./i3-wsl.sh xrdp [PORT]          # option 3
 ./i3-wsl.sh uninstall [--yes]    # remove everything
@@ -50,11 +50,13 @@ This installs i3, i3status, i3lock, dmenu, rofi, Xephyr, xterm, feh and fonts. I
 ## Option 1: i3 in a window (WSLg)
 
 ```bash
-./start-i3-wslg.sh                 # 1920x1080 on display :1
-./start-i3-wslg.sh 2560x1440       # custom size
-./start-i3-wslg.sh 2560x1440 2     # custom size and display number
+./start-i3-wslg.sh                 # window at 90% of your primary monitor (default)
+./start-i3-wslg.sh full            # fullscreen on your primary monitor
+./start-i3-wslg.sh 2560x1440       # exact size
+./start-i3-wslg.sh full 2          # fullscreen on display number :2
 ```
 
+- The monitor size comes from WSLg (`xrandr`). You can also resize or maximize the window afterwards, and i3 adapts to the new size.
 - Press **Ctrl+Shift** inside the window to grab the keyboard so Alt shortcuts go to i3. Press it again to release.
 - Closing the window or exiting i3 (Alt+Shift+e) stops everything.
 
@@ -137,7 +139,7 @@ Edit `~/.config/i3/config` to customise. To use the Win key anyway, change `set 
 
 - **"DISPLAY is not set"** (option 1): WSLg isn't running. Run `wsl --update` and `wsl --shutdown` in PowerShell, then reopen Ubuntu.
 - **Xephyr fails to start:** some WSL versions mount `/tmp/.X11-unix` read-only. The script tries to remount it as writable using sudo. Check `/tmp/xephyr-1.log` for details.
-- **"Display :1 is already in use":** pass another display number, e.g. `./start-i3-wslg.sh 1920x1080 2`.
+- **"Display :1 is already in use":** pass another display number, e.g. `./start-i3-wslg.sh auto 2`.
 - **"Cannot reach an X server"** (option 2): make sure the Windows X server is running, access control is disabled, and the firewall allows it on Public networks.
 - **Black screen over RDP:** make sure `~/.xsession` exists and is executable, and that no other i3 session for your user is already running.
 
