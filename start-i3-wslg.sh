@@ -212,6 +212,20 @@ WATCH_PID=""
 # the trap early and leave the Xephyr window open.
 trap 'kill $WATCH_PID 2>/dev/null || true; kill "$XPID" 2>/dev/null && wait "$XPID" 2>/dev/null || true; clean_stale || true' EXIT
 
+# make_fullscreen <host window id>: WSLg ignores a "go fullscreen" request
+# sent to a window that is already open; it only honours the fullscreen flag
+# when a window appears. So hide the window, set the flag, and show it again
+# (it stays on the monitor it was moved to). The request is sent as well, for
+# window managers that do honour it.
+make_fullscreen() {
+  local id="$1"
+  command -v xprop >/dev/null 2>&1 || return 1
+  timeout 3 xdotool windowunmap --sync "$id" 2>/dev/null || return 1
+  xprop -id "$id" -f _NET_WM_STATE 32a -set _NET_WM_STATE _NET_WM_STATE_FULLSCREEN 2>/dev/null
+  timeout 3 xdotool windowmap --sync "$id" 2>/dev/null || xdotool windowmap "$id" 2>/dev/null || return 1
+  xdotool windowstate --add FULLSCREEN "$id" 2>/dev/null || true
+}
+
 # Move each window into place (and make it fullscreen there). Xephyr creates
 # its windows in screen order, so sorting the window ids gives window 1, 2, ...
 if [[ ${#WIN_X[@]} -gt 0 ]]; then
@@ -229,7 +243,7 @@ if [[ ${#WIN_X[@]} -gt 0 ]]; then
       sleep 0.3
       for ((k = 0; k < ${#WIN_X[@]}; k++)); do
         if [[ ${WIN_FULL[$k]} -eq 1 ]]; then
-          xdotool windowstate --add FULLSCREEN "${WIDS[$k]}" 2>/dev/null ||
+          make_fullscreen "${WIDS[$k]}" ||
             echo "    (Couldn't make window $((k + 1)) fullscreen; maximize it instead.)"
         fi
       done
