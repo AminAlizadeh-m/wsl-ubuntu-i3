@@ -36,6 +36,21 @@ ZSH_PKGS=(zsh zsh-autosuggestions zsh-syntax-highlighting alacritty fonts-jetbra
 
 to_remove=()
 
+# 00. Apps: Google Chrome, VS Code, openfortivpn (install-*.sh)
+if [[ -n "$(installed google-chrome-stable)" ]] && ask "Remove Google Chrome?"; then
+  to_remove+=(google-chrome-stable)
+  sudo rm -f /etc/apt/sources.list.d/google-chrome.list /etc/apt/sources.list.d/google-chrome.sources
+fi
+if [[ -n "$(installed code)" ]] && ask "Remove VS Code (Linux version)?"; then
+  to_remove+=(code)
+  sudo rm -f /etc/apt/sources.list.d/vscode.sources /etc/apt/sources.list.d/vscode.list
+  # Microsoft's key, unless another apt source still uses it
+  grep -rqs 'microsoft.gpg' /etc/apt/sources.list.d/ || sudo rm -f /usr/share/keyrings/microsoft.gpg
+fi
+if [[ -n "$(installed openfortivpn)" ]] && ask "Remove openfortivpn (your settings in ~/.config/openfortivpn are kept)?"; then
+  to_remove+=(openfortivpn)
+fi
+
 # 0a. polybar, picom, autotiling (setup-polybar.sh)
 mapfile -t pb_found < <(installed "${POLYBAR_PKGS[@]}")
 if { [[ ${#pb_found[@]} -gt 0 ]] || [[ -e "$HOME/.config/polybar/.wsl-polybar" ]]; } &&

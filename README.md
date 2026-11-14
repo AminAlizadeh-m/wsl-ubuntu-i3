@@ -37,6 +37,7 @@ chmod +x *.sh
 ./i3-wsl.sh zsh                  # zsh + dark theme (see below)
 ./i3-wsl.sh theme [NAME]         # switch colour theme (see below)
 ./i3-wsl.sh polybar [OPTIONS]    # nicer i3: polybar, autotiling, picom
+./i3-wsl.sh chrome               # Google Chrome (also: vscode, openfortivpn)
 ./i3-wsl.sh uninstall [--yes]    # remove everything
 ```
 
@@ -192,6 +193,20 @@ Run it again with different options whenever you change your mind. For example, 
 
 Press Alt+Shift+r in i3 after the first run to start them. Uninstall removes all of this and brings back the i3 bar, keeping your theme.
 
+## Apps: Chrome, VS Code, Fortinet VPN
+
+```bash
+./install-chrome.sh         # Google Chrome
+./install-vscode.sh         # Visual Studio Code
+./install-openfortivpn.sh   # openfortivpn, a Fortinet SSL VPN client
+```
+
+They're also in the `i3-wsl.sh` menu (options 8–10). Chrome and VS Code come from Google's and Microsoft's official apt repositories, so `sudo apt upgrade` keeps them up to date. In i3, open them with **Alt+d** (type `chrome` or `code`).
+
+- **Chrome:** only available for 64-bit Intel/AMD machines; on others, use `sudo apt install chromium`. If it shows a black window, start it with `google-chrome --disable-gpu`.
+- **VS Code:** the script turns off hardware acceleration in `~/.vscode/argv.json`, because the i3 window and RDP have no graphics card acceleration. If you also have VS Code on Windows, typing `code` in WSL now opens this Linux version instead.
+- **openfortivpn:** the script creates `~/.config/openfortivpn/config`, readable only by you. Fill in `host` and `username`, then connect with `sudo openfortivpn -c ~/.config/openfortivpn/config` and disconnect with Ctrl+C. Leave the password out to be asked each time. On the first connection it may print the server's certificate fingerprint; add it as `trusted-cert` once your IT team confirms it. The VPN covers WSL and the apps in i3, not Windows itself.
+
 ## Uninstall
 
 ```bash
@@ -201,6 +216,7 @@ Press Alt+Shift+r in i3 after the first run to start them. Uninstall removes all
 
 You can also pick **Uninstall** from the `i3-wsl.sh` menu. The script:
 
+- Asks whether to remove Google Chrome, VS Code and openfortivpn, if installed (your VPN settings file is kept)
 - Removes polybar, picom and autotiling, and brings back the i3 bar
 - Undoes the zsh + dark theme setup: switches your login shell back to bash first, restores the `.pre-zsh-dark` backups, puts i3 back to its default colours and plain bar, removes Oh My Zsh (only if this project installed it), and removes zsh and Alacritty. It keeps git, since other things use it.
 - Stops and removes xrdp, if it was installed
