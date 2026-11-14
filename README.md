@@ -31,7 +31,7 @@ chmod +x *.sh
 
 ```bash
 ./i3-wsl.sh install              # install i3 only
-./i3-wsl.sh wslg [auto|full|WxH] # option 1, e.g. ./i3-wsl.sh wslg full
+./i3-wsl.sh wslg [auto|full|WxH] [--monitor N|largest]   # option 1, e.g. ./i3-wsl.sh wslg full --monitor 2
 ./i3-wsl.sh xserver [DISP]       # option 2
 ./i3-wsl.sh xrdp [PORT]          # option 3
 ./i3-wsl.sh zsh                  # zsh + dark theme (see below)
@@ -57,7 +57,12 @@ This installs i3, i3status, i3lock, dmenu, rofi, Xephyr, xterm, feh and fonts. I
 ./start-i3-wslg.sh full            # fullscreen on your primary monitor
 ./start-i3-wslg.sh 2560x1440       # exact size
 ./start-i3-wslg.sh full 2          # fullscreen on display number :2
+./start-i3-wslg.sh --monitors      # list your monitors
+./start-i3-wslg.sh full --monitor 2        # fullscreen on monitor 2
+./start-i3-wslg.sh full --monitor largest  # fullscreen on your biggest monitor
 ```
+
+- **Multiple monitors:** i3's screen size is set when it starts, from your primary monitor unless you choose with `--monitor`. If you drag the window to a monitor with a different size, **maximize it there** (double-click the title bar) and i3 resizes to fit. Fullscreen windows can't be resized that way, so for those, quit i3 (Alt+Shift+e) and start it again with `--monitor`.
 
 - The monitor size comes from WSLg (`xrandr`). You can also resize or maximize the window afterwards, and i3 adapts to the new size.
 - Press **Ctrl+Shift** inside the window to grab the keyboard so Alt shortcuts go to i3. Press it again to release.
