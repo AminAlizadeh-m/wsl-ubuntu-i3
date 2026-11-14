@@ -220,7 +220,7 @@ Edit `~/.config/i3/config` to customise. To use the Win key anyway, change `set 
 
 - **"DISPLAY is not set"** (option 1): WSLg isn't running. Run `wsl --update` and `wsl --shutdown` in PowerShell, then reopen Ubuntu.
 - **Xephyr fails to start:** some WSL versions mount `/tmp/.X11-unix` read-only. The script tries to remount it as writable using sudo. Check `/tmp/xephyr-1.log` for details.
-- **Every Enter opens a terminal, or every d opens the launcher:** the i3 window thinks Alt is held down. `start-i3-wslg.sh` resets the keyboard when it starts, so restart i3. To fix a running i3 without restarting, run this in a normal Ubuntu terminal: `DISPLAY=:1 setxkbmap us; DISPLAY=:1 xdotool keyup Alt_L Alt_R`. If your keyboard layout isn't detected correctly, set it with `I3_KB_LAYOUT=de ./start-i3-wslg.sh`, for example.
+- **Every Enter opens a terminal, or every d opens the launcher:** the i3 window thinks Alt is still held, usually after Alt+Tab to a Windows app. `start-i3-wslg.sh` releases the modifier keys when i3 starts and every time the i3 window gets focus back. If it still happens, press Alt once on its own, or run `fixkeys` in a zsh terminal (from `config/zshrc`). If your keyboard layout isn't detected correctly, set it with `I3_KB_LAYOUT=de ./start-i3-wslg.sh`, for example.
 - **"Display :1 is already in use":** pass another display number, e.g. `./start-i3-wslg.sh auto 2`.
 - **"Cannot reach an X server"** (option 2): make sure the Windows X server is running, access control is disabled, and the firewall allows it on Public networks.
 - **Black screen over RDP:** make sure `~/.xsession` exists and is executable, and that no other i3 session for your user is already running.

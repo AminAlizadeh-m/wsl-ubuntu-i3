@@ -144,7 +144,8 @@ if ! start_xephyr "${XARGS[@]}"; then
   clean_stale
   exit 1
 fi
-trap 'kill "$XPID" 2>/dev/null && wait "$XPID" 2>/dev/null; clean_stale' EXIT
+WATCH_PID=""
+trap 'kill $WATCH_PID 2>/dev/null; kill "$XPID" 2>/dev/null && wait "$XPID" 2>/dev/null; clean_stale' EXIT
 
 # Move the window to the chosen monitor (and make it fullscreen there).
 if [[ $OTHER_MONITOR -eq 1 ]]; then
@@ -174,12 +175,38 @@ fix_keyboard() {
   else
     echo "    (setxkbmap missing: sudo apt install x11-xkb-utils)"
   fi
-  if command -v xdotool >/dev/null 2>&1; then
-    DISPLAY=":$DNUM" xdotool keyup Alt_L Alt_R Meta_L Meta_R Super_L Super_R \
-      Control_L Control_R Shift_L Shift_R 2>/dev/null || true
-  fi
+  release_modifiers
+}
+
+# Tell Xephyr that all modifier keys are up.
+release_modifiers() {
+  command -v xdotool >/dev/null 2>&1 || return 0
+  DISPLAY=":$DNUM" xdotool keyup Alt_L Alt_R Meta_L Meta_R Super_L Super_R \
+    Control_L Control_R Shift_L Shift_R 2>/dev/null || true
 }
 fix_keyboard
+
+# Keys pressed while switching away (e.g. Alt+Tab to a Windows app) never get
+# their "released" event inside Xephyr, so Alt stays held: every Enter opens a
+# terminal and every d opens the launcher. Watch the window focus on the WSLg
+# display, and release the modifiers each time the i3 window gets focus back.
+watch_focus() {
+  local xwin last="" cur
+  xwin=$(timeout 5 xdotool search --sync --name '^i3 \(WSL\)$' 2>/dev/null | head -1)
+  [[ -n "$xwin" ]] || return 0
+  while kill -0 "$XPID" 2>/dev/null; do
+    cur=$(xdotool getwindowfocus 2>/dev/null || true)
+    if [[ "$cur" == "$xwin" && "$last" != "$xwin" && -n "$last" ]]; then
+      release_modifiers
+    fi
+    last="$cur"
+    sleep 0.3
+  done
+}
+if command -v xdotool >/dev/null 2>&1; then
+  watch_focus &
+  WATCH_PID=$!
+fi
 
 echo "==> Launching i3 (modifier is Alt; Alt+Enter = terminal, Alt+Shift+e = exit)"
 DISPLAY=":$DNUM" WAYLAND_DISPLAY= dbus-launch --exit-with-session i3
