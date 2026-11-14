@@ -2,7 +2,7 @@
 # Set up zsh as your shell and give i3 a dark theme:
 #   - git, and zsh with Oh My Zsh (robbyrussell theme, git, autosuggestions
 #     and syntax-highlighting plugins), using config/zshrc as ~/.zshrc
-#   - Alacritty terminal on Alt+Enter, with xterm as fallback
+#   - Alacritty, which Alt+Enter in i3 then opens (xterm is the fallback)
 #   - dark GTK apps
 #   - colours for i3, its bar, the terminals and rofi via set-theme.sh
 #     (Tokyo Night by default; switch any time with ./set-theme.sh <theme>)
@@ -21,6 +21,11 @@ I3_CFG="$HOME/.config/i3/config"
 if [[ ! -f "$I3_CFG" ]]; then
   echo "No i3 config at $I3_CFG. Run ./install-i3.sh first." >&2
   exit 1
+fi
+# An i3 config from an older version of these scripts: switch to the current
+# one first (install-i3.sh --config keeps your theme and backs up the old file).
+if ! grep -q '^# i3 config from wsl-ubuntu-i3' "$I3_CFG"; then
+  "$(dirname "${BASH_SOURCE[0]}")/install-i3.sh" --config
 fi
 
 # Back up a file once, before we first change it. Files this script wrote
@@ -82,34 +87,6 @@ backup_once "$ZSHRC"
 echo "==> Installing $ZSHRC from config/zshrc"
 cp "$(dirname "${BASH_SOURCE[0]}")/config/zshrc" "$ZSHRC"
 
-# ---------------------------------------------------------------- terminal wrapper
-# Xephyr and xrdp have no GPU, so run Alacritty with software rendering, and
-# open xterm instead if Alacritty fails to start.
-TERM_WRAPPER="$HOME/.local/bin/i3-term"
-mkdir -p "$(dirname "$TERM_WRAPPER")"
-echo "==> Writing $TERM_WRAPPER"
-cat > "$TERM_WRAPPER" <<'EOF'
-#!/bin/sh
-# Terminal launcher for i3 (from setup-zsh-dark.sh)
-export LIBGL_ALWAYS_SOFTWARE=1
-if command -v alacritty >/dev/null 2>&1; then
-  start=$(date +%s)
-  alacritty "$@" && exit 0
-  # Only fall back if Alacritty died right away (failed to start)
-  [ $(( $(date +%s) - start )) -ge 3 ] && exit 0
-fi
-exec xterm "$@"
-EOF
-chmod +x "$TERM_WRAPPER"
-
-# ---------------------------------------------------------------- i3: Alt+Enter
-# Point Alt+Enter at the wrapper. Replace the existing line, never add a
-# second one (i3 rejects duplicate keybindings).
-I3_KEY="bindsym \$mod+Return exec --no-startup-id $TERM_WRAPPER"
-backup_once "$I3_CFG"
-sed -i -E "s|^bindsym \\\$mod\+Return exec .*|$I3_KEY|" "$I3_CFG"
-grep -q "^bindsym \$mod+Return exec" "$I3_CFG" || echo "$I3_KEY" >> "$I3_CFG"
-
 # ---------------------------------------------------------------- GTK apps
 for v in 3.0 4.0; do
   GTK_CFG="$HOME/.config/gtk-$v/settings.ini"
@@ -125,7 +102,7 @@ done
 
 # ---------------------------------------------------------------- colours
 # Keep the current theme if one is set, otherwise start with Tokyo Night.
-THEME="$(sed -n 's/^# theme: //p' "$I3_CFG" | head -1)"
+THEME="$(sed -n 's/^# theme: //p' "$HOME/.config/i3/generated/theme.conf" 2>/dev/null | head -1)"
 "$(dirname "${BASH_SOURCE[0]}")/set-theme.sh" "${THEME:-tokyonight}"
 
 # ---------------------------------------------------------------- login shell

@@ -45,8 +45,12 @@ if { [[ ${#pb_found[@]} -gt 0 ]] || [[ -e "$HOME/.config/polybar/.wsl-polybar" ]
   if [[ -f "$I3C" ]]; then
     sed -i '/^# >>> wsl-polybar >>>/,/^# <<< wsl-polybar <<</d' "$I3C"
     # Re-apply the theme without polybar, so the i3 bar comes back
-    theme="$(sed -n 's/^# theme: //p' "$I3C" | head -1)"
-    [[ -n "$theme" && -x "$(dirname "$0")/set-theme.sh" ]] && "$(dirname "$0")/set-theme.sh" "$theme" >/dev/null
+    theme="$(sed -n 's/^# theme: //p' "$HOME/.config/i3/generated/theme.conf" 2>/dev/null | head -1)"
+    if [[ -n "$theme" && -x "$(dirname "$0")/set-theme.sh" ]]; then
+      "$(dirname "$0")/set-theme.sh" "$theme" >/dev/null
+    elif [[ -d "$HOME/.config/i3/generated" ]]; then
+      cp "$(dirname "$0")/config/i3/bar.conf" "$HOME/.config/i3/generated/bar.conf"
+    fi
   fi
   for f in "$HOME/.config/polybar/config.ini" "$HOME/.config/picom/picom.conf"; do
     if [[ -e "$f.pre-zsh-dark" ]]; then
@@ -71,7 +75,7 @@ fi
 MARK='setup-zsh-dark.sh\|wsl-dark-theme'
 login_shell="$(getent passwd "$USER" | cut -d: -f7)"
 mapfile -t zsh_found < <(installed "${ZSH_PKGS[@]}")
-if { [[ ${#zsh_found[@]} -gt 0 ]] || [[ -e "$HOME/.local/bin/i3-term" ]]; } &&
+if { [[ ${#zsh_found[@]} -gt 0 ]] || [[ -e "$HOME/.oh-my-zsh/.installed-by-wsl-i3" ]]; } &&
    ask "Undo the zsh + dark theme setup (and remove zsh, Alacritty)?"; then
   remove_zsh=1
   # The login shell must not point at zsh once zsh is gone, or WSL can't open a shell.
@@ -85,7 +89,7 @@ if { [[ ${#zsh_found[@]} -gt 0 ]] || [[ -e "$HOME/.local/bin/i3-term" ]]; } &&
 
   # Put back the files we replaced, or remove the ones we created.
   for f in "$HOME/.zshrc" "$HOME/.config/alacritty/alacritty.toml" \
-           "$HOME/.config/rofi/config.rasi" "$HOME/.Xresources" "$HOME/.config/i3/config" \
+           "$HOME/.config/rofi/config.rasi" "$HOME/.Xresources" \
            "$HOME/.config/i3status/config"; do
     if [[ -e "$f.pre-zsh-dark" ]]; then
       mv -f "$f.pre-zsh-dark" "$f"
@@ -93,13 +97,18 @@ if { [[ ${#zsh_found[@]} -gt 0 ]] || [[ -e "$HOME/.local/bin/i3-term" ]]; } &&
     elif [[ -f "$f" ]] && grep -q "$MARK" "$f"; then
       case "$f" in
         */.Xresources) sed -i '/^! >>> wsl-dark-theme >>>/,/^! <<< wsl-dark-theme <<</d' "$f" ;;
-        */i3/config)   sed -i '/^# >>> wsl-dark-theme >>>/,/^# <<< wsl-dark-theme <<</d' "$f" ;;
         *)             rm -f "$f" ;;
       esac
       echo "==> Removed dark-theme settings from $f"
     fi
   done
-  rm -f "$HOME/.local/bin/i3-term"
+  # i3 back to its default colours and plain bar (the i3 config itself stays)
+  I3G="$HOME/.config/i3/generated"
+  if [[ -d "$I3G" ]]; then
+    printf '# No theme set yet. Run ./set-theme.sh <theme> to pick one.\n' > "$I3G/theme.conf"
+    [[ -f "$HOME/.config/polybar/.wsl-polybar" ]] || cp "$(dirname "$0")/config/i3/bar.conf" "$I3G/bar.conf"
+    echo "==> i3 is back to its default colours"
+  fi
   # Oh My Zsh, only if this project installed it
   if [[ -f "$HOME/.oh-my-zsh/.installed-by-wsl-i3" ]]; then
     rm -rf "$HOME/.oh-my-zsh"
@@ -131,6 +140,7 @@ fi
 mapfile -t core_found < <(installed "${CORE_PKGS[@]}")
 if [[ ${#core_found[@]} -gt 0 ]] && ask "Remove i3, i3status, i3lock, dmenu, rofi and Xephyr?"; then
   to_remove+=("${core_found[@]}")
+  rm -f "$HOME/.local/bin/i3-term"
 fi
 
 # 3. General X tools (other GUI apps may use these, so ask separately)

@@ -23,6 +23,11 @@ if [[ ! -f "$I3_CFG" ]]; then
   echo "No i3 config at $I3_CFG. Run ./install-i3.sh first." >&2
   exit 1
 fi
+# An i3 config from an older version of these scripts: switch to the current
+# one first (install-i3.sh --config keeps your theme and backs up the old file).
+if ! grep -q '^# i3 config from wsl-ubuntu-i3' "$I3_CFG"; then
+  "$(dirname "${BASH_SOURCE[0]}")/install-i3.sh" --config
+fi
 
 USE_PICOM=1
 USE_POLYBAR=1
@@ -43,7 +48,7 @@ sudo apt-get update
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "${PKGS[@]}"
 
 # ---------------------------------------------------------------- launcher
-# i3 runs this on every start/restart. It keeps a list of what it started per
+# The i3 config runs this on every start/restart (if it exists). It keeps a list of what it started per
 # display, so restarting one i3 (e.g. the Xephyr window) doesn't touch the bar
 # of another (e.g. an RDP session).
 LAUNCHER="$HOME/.local/bin/i3-extras"
@@ -120,24 +125,8 @@ fi
 [[ $USE_PICOM -eq 1 ]] && touch "$HOME/.config/picom/.wsl-picom"
 
 # ---------------------------------------------------------------- i3
-echo "==> Updating $I3_CFG"
-[[ ! -e "$I3_CFG.pre-zsh-dark" ]] && ! grep -q 'wsl-dark-theme' "$I3_CFG" && cp -a "$I3_CFG" "$I3_CFG.pre-zsh-dark"
-TMP_CFG="$(mktemp)"
-sed '/^# >>> wsl-polybar >>>/,/^# <<< wsl-polybar <<</d' "$I3_CFG" > "$TMP_CFG"
-{
-  echo "# >>> wsl-polybar >>>"
-  echo "# Added by setup-polybar.sh. Re-running it replaces this block."
-  echo "exec_always --no-startup-id $LAUNCHER"
-  echo "# <<< wsl-polybar <<<"
-} >> "$TMP_CFG"
-if command -v i3 >/dev/null && ! i3 -C -c "$TMP_CFG" >/dev/null 2>&1; then
-  echo "The new i3 config has errors, keeping your old one. Details:" >&2
-  i3 -C -c "$TMP_CFG" >&2 || true
-  rm -f "$TMP_CFG"
-  exit 1
-fi
-cat "$TMP_CFG" > "$I3_CFG"
-rm -f "$TMP_CFG"
+# Nothing to change: the i3 config always runs ~/.local/bin/i3-extras when it
+# exists (see "startup" in config/i3/config).
 
 # ---------------------------------------------------------------- colours
 # The flag tells set-theme.sh to write polybar's config and hide i3bar, and the
@@ -148,7 +137,7 @@ if [[ $USE_POLYBAR -eq 1 ]]; then
 else
   rm -f "$HOME/.config/polybar/.wsl-polybar"
 fi
-THEME="$(sed -n 's/^# theme: //p' "$I3_CFG" | head -1)"
+THEME="$(sed -n 's/^# theme: //p' "$HOME/.config/i3/generated/theme.conf" 2>/dev/null | head -1)"
 "$DIR/set-theme.sh" "${THEME:-tokyonight}"
 
 echo

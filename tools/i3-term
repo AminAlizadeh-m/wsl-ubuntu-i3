@@ -1,0 +1,15 @@
+#!/bin/sh
+# Terminal for i3's Alt+Enter (installed to ~/.local/bin/i3-term by install-i3.sh).
+# Uses Alacritty if it's installed, with software rendering because the i3
+# window and RDP have no GPU. Falls back to xterm if Alacritty can't start.
+if command -v alacritty >/dev/null 2>&1; then
+  export LIBGL_ALWAYS_SOFTWARE=1
+  start=$(date +%s)
+  alacritty "$@" && exit 0
+  # Alacritty exited with an error: only fall back if it died right away
+  [ $(( $(date +%s) - start )) -ge 3 ] && exit 0
+fi
+if command -v xterm >/dev/null 2>&1; then
+  exec xterm "$@"
+fi
+exec i3-sensible-terminal "$@"

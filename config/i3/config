@@ -1,0 +1,170 @@
+# i3 config from wsl-ubuntu-i3
+#
+# Installed as ~/.config/i3/config by install-i3.sh, which replaces it on every
+# update. Put your own changes in ~/.config/i3/config.d/custom.conf instead;
+# that file is loaded last and never overwritten.
+#
+# Files loaded at the end of this config:
+#   generated/theme.conf  colours and font       (written by set-theme.sh)
+#   generated/bar.conf    the bar, or nothing when polybar is used
+#   config.d/custom.conf  your own settings
+#
+# Reference: https://i3wm.org/docs/userguide.html
+
+# ---------------------------------------------------------------- variables
+
+# Alt is the modifier: Windows takes most Win-key shortcuts before Linux sees them.
+set $mod Mod1
+
+# Alacritty with a fallback to xterm (installed by install-i3.sh)
+set $term ~/.local/bin/i3-term
+set $menu rofi -show drun
+
+# Direction keys (i3's defaults, next to the home row)
+set $left  j
+set $down  k
+set $up    l
+set $right semicolon
+
+set $ws1  "1"
+set $ws2  "2"
+set $ws3  "3"
+set $ws4  "4"
+set $ws5  "5"
+set $ws6  "6"
+set $ws7  "7"
+set $ws8  "8"
+set $ws9  "9"
+set $ws10 "10"
+
+# ---------------------------------------------------------------- look and behaviour
+
+# Default font; generated/theme.conf replaces it with the theme's font.
+font pango:monospace 10
+
+# Thin borders instead of title bars, and small gaps between windows
+default_border pixel 2
+default_floating_border pixel 2
+gaps inner 6
+
+# Hold Alt and drag with the mouse to move floating windows (right button resizes)
+floating_modifier $mod
+tiling_drag modifier titlebar
+
+# Dialogs and pop-ups float instead of taking a tile
+for_window [window_role="pop-up"] floating enable
+for_window [window_role="dialog"] floating enable
+for_window [window_type="dialog"] floating enable
+
+# ---------------------------------------------------------------- startup
+
+# polybar, autotiling and picom, if setup-polybar.sh has set them up
+exec_always --no-startup-id test -x ~/.local/bin/i3-extras && ~/.local/bin/i3-extras
+
+# ---------------------------------------------------------------- apps
+
+bindsym $mod+Return exec --no-startup-id $term
+bindsym $mod+d exec --no-startup-id $menu
+# Switch to any open window by name
+bindsym $mod+grave exec --no-startup-id rofi -show window
+
+bindsym $mod+Shift+q kill
+
+# ---------------------------------------------------------------- focus and move
+
+bindsym $mod+$left  focus left
+bindsym $mod+$down  focus down
+bindsym $mod+$up    focus up
+bindsym $mod+$right focus right
+bindsym $mod+Left   focus left
+bindsym $mod+Down   focus down
+bindsym $mod+Up     focus up
+bindsym $mod+Right  focus right
+
+bindsym $mod+Shift+$left  move left
+bindsym $mod+Shift+$down  move down
+bindsym $mod+Shift+$up    move up
+bindsym $mod+Shift+$right move right
+bindsym $mod+Shift+Left   move left
+bindsym $mod+Shift+Down   move down
+bindsym $mod+Shift+Up     move up
+bindsym $mod+Shift+Right  move right
+
+# Focus the parent container
+bindsym $mod+a focus parent
+
+# ---------------------------------------------------------------- layout
+
+# Where the next window opens: beside (h) or below (v) the current one
+bindsym $mod+h split h
+bindsym $mod+v split v
+
+bindsym $mod+f fullscreen toggle
+
+bindsym $mod+s layout stacking
+bindsym $mod+w layout tabbed
+bindsym $mod+e layout toggle split
+
+# Float or tile the window, and switch focus between floating and tiled
+bindsym $mod+Shift+space floating toggle
+bindsym $mod+space focus mode_toggle
+
+# Scratchpad: a hidden spot to park a window and bring it back
+bindsym $mod+Shift+minus move scratchpad
+bindsym $mod+minus scratchpad show
+
+# ---------------------------------------------------------------- workspaces
+
+bindsym $mod+1 workspace number $ws1
+bindsym $mod+2 workspace number $ws2
+bindsym $mod+3 workspace number $ws3
+bindsym $mod+4 workspace number $ws4
+bindsym $mod+5 workspace number $ws5
+bindsym $mod+6 workspace number $ws6
+bindsym $mod+7 workspace number $ws7
+bindsym $mod+8 workspace number $ws8
+bindsym $mod+9 workspace number $ws9
+bindsym $mod+0 workspace number $ws10
+
+bindsym $mod+Shift+1 move container to workspace number $ws1
+bindsym $mod+Shift+2 move container to workspace number $ws2
+bindsym $mod+Shift+3 move container to workspace number $ws3
+bindsym $mod+Shift+4 move container to workspace number $ws4
+bindsym $mod+Shift+5 move container to workspace number $ws5
+bindsym $mod+Shift+6 move container to workspace number $ws6
+bindsym $mod+Shift+7 move container to workspace number $ws7
+bindsym $mod+Shift+8 move container to workspace number $ws8
+bindsym $mod+Shift+9 move container to workspace number $ws9
+bindsym $mod+Shift+0 move container to workspace number $ws10
+
+# ---------------------------------------------------------------- resize mode
+
+# Alt+r, then arrows (or j k l ;) to resize; Enter or Esc when done
+mode "resize" {
+        bindsym $left  resize shrink width 10 px or 10 ppt
+        bindsym $down  resize grow height 10 px or 10 ppt
+        bindsym $up    resize shrink height 10 px or 10 ppt
+        bindsym $right resize grow width 10 px or 10 ppt
+
+        bindsym Left   resize shrink width 10 px or 10 ppt
+        bindsym Down   resize grow height 10 px or 10 ppt
+        bindsym Up     resize shrink height 10 px or 10 ppt
+        bindsym Right  resize grow width 10 px or 10 ppt
+
+        bindsym Return mode "default"
+        bindsym Escape mode "default"
+        bindsym $mod+r mode "default"
+}
+bindsym $mod+r mode "resize"
+
+# ---------------------------------------------------------------- i3 itself
+
+bindsym $mod+Shift+c reload
+bindsym $mod+Shift+r restart
+bindsym $mod+Shift+e exec "i3-nagbar -t warning -m 'Exit i3? This closes the i3 window or RDP session.' -B 'Yes, exit i3' 'i3-msg exit'"
+
+# ---------------------------------------------------------------- included files
+
+include ~/.config/i3/generated/theme.conf
+include ~/.config/i3/generated/bar.conf
+include ~/.config/i3/config.d/custom.conf

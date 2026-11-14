@@ -30,7 +30,7 @@ chmod +x *.sh
 `i3-wsl.sh` shows a menu where you pick a method. If i3 isn't installed yet, it runs the installer first. You can also skip the menu and name the method directly:
 
 ```bash
-./i3-wsl.sh install              # install i3 only
+./i3-wsl.sh install [--config]   # install i3 (--config: only update the i3 config)
 ./i3-wsl.sh wslg [auto|full|WxH] [--monitor N|largest]   # option 1, e.g. ./i3-wsl.sh wslg full --monitor 2
 ./i3-wsl.sh xserver [DISP]       # option 2
 ./i3-wsl.sh xrdp [PORT]          # option 3
@@ -48,7 +48,23 @@ The sections below describe each method and the script that `i3-wsl.sh` calls fo
 ./install-i3.sh
 ```
 
-This installs i3, i3status, i3lock, dmenu, rofi, Xephyr, xterm, feh and fonts. It also creates `~/.config/i3/config` from the stock config, so i3's first-run setup wizard doesn't appear. An existing config is left untouched.
+This installs i3, i3status, i3lock, dmenu, rofi, Xephyr, xterm, feh and fonts, plus the i3 config from this repo.
+
+### The i3 config
+
+The config lives in the repo as [config/i3/config](config/i3/config), organised in sections with comments. It's the stock i3 setup adapted for WSL, with the same keys. `install-i3.sh` sets up `~/.config/i3/` like this:
+
+| File | What it is |
+| --- | --- |
+| `config` | Copy of `config/i3/config`. **Replaced on every update.** |
+| `generated/theme.conf` | Colours and font, written by `set-theme.sh` |
+| `generated/bar.conf` | The bar, written by `set-theme.sh` (empty when polybar is used) |
+| `config.d/custom.conf` | **Your own settings.** Loaded last and never overwritten. |
+
+- **After `git pull`,** run `./install-i3.sh --config` to update just the i3 config, without reinstalling packages. Any running i3 reloads automatically.
+- **Your own changes** go in `~/.config/i3/config.d/custom.conf`, then press Alt+Shift+c to reload. You can add new shortcuts there, but not reuse a key the main config already binds, because i3 rejects duplicate bindings. To change an existing key, edit `config/i3/config` in the repo and run `./install-i3.sh --config`.
+- **Upgrading from an older version** of these scripts: the first `./install-i3.sh --config` backs up your old config as `~/.config/i3/config.pre-wsl-i3` and keeps your theme. The other setup scripts do this for you automatically if needed.
+- **Safety:** every script checks the config with `i3 -C` before saving. If there's an error (for example in `custom.conf`), your working config is kept and the error is shown.
 
 ## Option 1: i3 in a window (WSLg)
 
@@ -131,8 +147,8 @@ Then press **Alt+Shift+r** in i3 to load it.
 - Your zsh config is [config/zshrc](config/zshrc). The script copies it to `~/.zshrc`, so edit that file in the repo to change it everywhere. It also loads nvm and Go if you have them installed.
 - Oh My Zsh and the two extra plugins are downloaded with git from GitHub. Running the script again updates the plugins. Oh My Zsh updates itself.
 - `chsh` asks for your Linux password. Changing the login shell also changes what Windows Terminal's Ubuntu tab and `wsl` open, so reopen them to get zsh.
-- Files it replaces are backed up once as `<file>.pre-zsh-dark`: `~/.zshrc`, `~/.Xresources`, `~/.config/i3/config`, and the Alacritty and rofi configs.
-- It's safe to run again. Its i3 settings live between `# >>> wsl-dark-theme >>>` markers and are replaced, not duplicated. Put your own i3 changes outside those markers.
+- Files it replaces are backed up once as `<file>.pre-zsh-dark`: `~/.zshrc`, `~/.Xresources`, and the i3status, Alacritty and rofi configs. For i3 it only writes `~/.config/i3/generated/theme.conf` and `bar.conf`.
+- It's safe to run again.
 
 ## Colour themes
 
@@ -180,7 +196,7 @@ Press Alt+Shift+r in i3 after the first run to start them. Uninstall removes all
 You can also pick **Uninstall** from the `i3-wsl.sh` menu. The script:
 
 - Removes polybar, picom and autotiling, and brings back the i3 bar
-- Undoes the zsh + dark theme setup: switches your login shell back to bash first, restores the `.pre-zsh-dark` backups, removes Oh My Zsh (only if this project installed it), and removes zsh and Alacritty. It keeps git, since other things use it.
+- Undoes the zsh + dark theme setup: switches your login shell back to bash first, restores the `.pre-zsh-dark` backups, puts i3 back to its default colours and plain bar, removes Oh My Zsh (only if this project installed it), and removes zsh and Alacritty. It keeps git, since other things use it.
 - Stops and removes xrdp, if it was installed
 - Removes i3, i3status, i3lock, dmenu, rofi and Xephyr
 - Asks separately before removing general X tools (xterm, feh, x11-apps and others), since other Linux GUI apps may use them
@@ -208,13 +224,22 @@ The modifier is **Alt**, not the Win key, because Windows takes most Win-key sho
 | --- | --- |
 | Alt+Enter | Terminal |
 | Alt+d | App launcher (rofi) |
+| Alt+` | Switch to any open window by name |
 | Alt+Shift+q | Close window |
+| Alt+arrows / Alt+j k l ; | Move focus |
+| Alt+Shift+arrows | Move window |
 | Alt+1 … Alt+0 | Switch workspace |
 | Alt+Shift+1 … | Move window to workspace |
-| Alt+Shift+r | Restart i3 (reload config) |
+| Alt+h / Alt+v | Open the next window beside / below |
+| Alt+w / Alt+s / Alt+e | Tabbed / stacked / side-by-side layout |
+| Alt+f | Fullscreen |
+| Alt+Shift+Space / Alt+Space | Float or tile a window / switch focus between them |
+| Alt+Shift+- / Alt+- | Park a window in the scratchpad / bring it back |
+| Alt+r | Resize mode (arrows, then Enter) |
+| Alt+Shift+c / Alt+Shift+r | Reload config / restart i3 |
 | Alt+Shift+e | Exit i3 |
 
-Edit `~/.config/i3/config` to customise. To use the Win key anyway, change `set $mod Mod1` to `set $mod Mod4`. This works best with the xrdp option.
+To customise, see [The i3 config](#the-i3-config). To use the Win key anyway, change `set $mod Mod1` to `set $mod Mod4` in `config/i3/config` and run `./install-i3.sh --config`. This works best with the xrdp option.
 
 ## Troubleshooting
 

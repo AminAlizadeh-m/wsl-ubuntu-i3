@@ -2,7 +2,7 @@
 # One entry point for running i3 on WSL: pick a method from a menu,
 # or pass it directly:
 #   ./i3-wsl.sh                      interactive menu
-#   ./i3-wsl.sh install              install i3 only
+#   ./i3-wsl.sh install [--config]   install i3 (--config: only update the i3 config)
 #   ./i3-wsl.sh wslg [auto|full|WxH] [--monitor N|largest]  i3 in a window via WSLg
 #   ./i3-wsl.sh xserver [DISP]       full screen via VcXsrv/X410
 #   ./i3-wsl.sh xrdp [PORT]          full desktop via Remote Desktop
@@ -24,7 +24,7 @@ ensure_installed() {
 run_method() {
   local method="$1"; shift
   case "$method" in
-    install) "$DIR/install-i3.sh" ;;
+    install) "$DIR/install-i3.sh" "$@" ;;
     wslg)    ensure_installed; exec "$DIR/start-i3-wslg.sh" "$@" ;;
     xserver) ensure_installed; exec "$DIR/start-i3-windows-xserver.sh" "$@" ;;
     xrdp)    ensure_installed; exec "$DIR/setup-xrdp.sh" "$@" ;;
