@@ -185,6 +185,17 @@ You can also pick **Uninstall** from the `i3-wsl.sh` menu. The script:
 
 It never removes `iproute2` or `fonts-dejavu-core`, since other software relies on them.
 
+### Removing GlazeWM
+
+Earlier versions of this project could install GlazeWM, a tiling window manager for Windows. Its Alt shortcuts clash with i3. For example, it can leave Alt "stuck" so that every Enter opens a new terminal. To remove it, run this from WSL:
+
+```bash
+./uninstall-glazewm.sh          # asks first
+./uninstall-glazewm.sh --yes    # no questions
+```
+
+It quits GlazeWM (and its Zebar bar), uninstalls both with winget, and removes the GlazeWM config this project wrote. If you had your own config before, it's restored.
+
 ## Keys
 
 The modifier is **Alt**, not the Win key, because Windows takes most Win-key shortcuts before Linux sees them.
