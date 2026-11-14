@@ -35,6 +35,7 @@ chmod +x *.sh
 ./i3-wsl.sh xserver [DISP]       # option 2
 ./i3-wsl.sh xrdp [PORT]          # option 3
 ./i3-wsl.sh zsh                  # zsh + dark theme (see below)
+./i3-wsl.sh theme [NAME]         # switch colour theme (see below)
 ./i3-wsl.sh uninstall [--yes]    # remove everything
 ```
 
@@ -112,7 +113,7 @@ Run this after i3 is installed (or pick **Zsh + dark theme** from the `i3-wsl.sh
 
 - **zsh** as your login shell, with autosuggestions, syntax highlighting, shared history, menu completion and a prompt showing the folder, git branch, and a red arrow after a failed command
 - **Alacritty** as the Alt+Enter terminal, in dark colours. Xephyr and xrdp have no GPU, so it runs with software rendering, and falls back to a dark-themed xterm if it can't start
-- **Dark i3:** window borders, a bar at the top, small gaps between windows and the JetBrains Mono font (if available)
+- **Dark i3:** window borders, a bar at the top, small gaps between windows and the JetBrains Mono font (if available), in the Tokyo Night theme. Switch with `set-theme.sh` (below).
 - **Dark rofi** launcher (Alt+d) and dark GTK apps
 
 Then press **Alt+Shift+r** in i3 to load it.
@@ -120,6 +121,25 @@ Then press **Alt+Shift+r** in i3 to load it.
 - `chsh` asks for your Linux password. Changing the login shell also changes what Windows Terminal's Ubuntu tab and `wsl` open, so reopen them to get zsh.
 - Files it replaces are backed up once as `<file>.pre-zsh-dark`: `~/.zshrc`, `~/.Xresources`, `~/.config/i3/config`, and the Alacritty and rofi configs.
 - It's safe to run again. Its i3 settings live between `# >>> wsl-dark-theme >>>` markers and are replaced, not duplicated. Put your own i3 changes outside those markers.
+
+## Colour themes
+
+```bash
+./set-theme.sh               # list themes and show the current one
+./set-theme.sh catppuccin    # apply a theme
+```
+
+| Theme | Look |
+| --- | --- |
+| `catppuccin` | Soft pastels on dark blue-grey (Catppuccin Mocha) |
+| `gruvbox` | Warm retro browns and oranges |
+| `nord` | Cool, muted blue-grey |
+| `tokyonight` | Dark navy with blue and purple (default) |
+| `dracula` | Dark with vivid purple and pink |
+
+One command recolours i3 window borders, the bar, i3status text, Alacritty, xterm and the rofi launcher. If i3 is running, it restarts i3 to apply the colours (your windows stay open). Open Alacritty windows update by themselves.
+
+You can also pick **Change colour theme** from the `i3-wsl.sh` menu. Running `setup-zsh-dark.sh` again keeps whichever theme you chose.
 
 ## Uninstall
 

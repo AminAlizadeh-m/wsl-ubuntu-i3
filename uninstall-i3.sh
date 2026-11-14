@@ -53,7 +53,8 @@ if { [[ ${#zsh_found[@]} -gt 0 ]] || [[ -e "$HOME/.local/bin/i3-term" ]]; } &&
 
   # Put back the files we replaced, or remove the ones we created.
   for f in "$HOME/.zshrc" "$HOME/.config/alacritty/alacritty.toml" \
-           "$HOME/.config/rofi/config.rasi" "$HOME/.Xresources" "$HOME/.config/i3/config"; do
+           "$HOME/.config/rofi/config.rasi" "$HOME/.Xresources" "$HOME/.config/i3/config" \
+           "$HOME/.config/i3status/config"; do
     if [[ -e "$f.pre-zsh-dark" ]]; then
       mv -f "$f.pre-zsh-dark" "$f"
       echo "==> Restored $f"
