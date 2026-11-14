@@ -145,7 +145,9 @@ if ! start_xephyr "${XARGS[@]}"; then
   exit 1
 fi
 WATCH_PID=""
-trap 'kill $WATCH_PID 2>/dev/null; kill "$XPID" 2>/dev/null && wait "$XPID" 2>/dev/null; clean_stale' EXIT
+# Every step must be allowed to fail: with set -e a failing command would end
+# the trap early and leave the Xephyr window open.
+trap 'kill $WATCH_PID 2>/dev/null || true; kill "$XPID" 2>/dev/null && wait "$XPID" 2>/dev/null || true; clean_stale || true' EXIT
 
 # Move the window to the chosen monitor (and make it fullscreen there).
 if [[ $OTHER_MONITOR -eq 1 ]]; then
@@ -186,25 +188,14 @@ release_modifiers() {
 }
 fix_keyboard
 
-# Keys pressed while switching away (e.g. Alt+Tab to a Windows app) never get
-# their "released" event inside Xephyr, so Alt stays held: every Enter opens a
-# terminal and every d opens the launcher. Watch the window focus on the WSLg
-# display, and release the modifiers each time the i3 window gets focus back.
-watch_focus() {
-  local xwin last="" cur
-  xwin=$(timeout 5 xdotool search --sync --name '^i3 \(WSL\)$' 2>/dev/null | head -1)
-  [[ -n "$xwin" ]] || return 0
-  while kill -0 "$XPID" 2>/dev/null; do
-    cur=$(xdotool getwindowfocus 2>/dev/null || true)
-    if [[ "$cur" == "$xwin" && "$last" != "$xwin" && -n "$last" ]]; then
-      release_modifiers
-    fi
-    last="$cur"
-    sleep 0.3
-  done
-}
-if command -v xdotool >/dev/null 2>&1; then
-  watch_focus &
+# Keys released while another window has focus (e.g. Alt+Tab to a Windows
+# app) never reach Xephyr, so Alt stays held: every d opens the launcher and
+# every Enter a terminal. tools/unstick-keys.py compares the held modifier
+# keys with WSLg's X server (which follows the real keyboard) and releases
+# any that are only stuck inside Xephyr.
+UNSTICK="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/tools/unstick-keys.py"
+if command -v xdotool >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1 && [[ -f "$UNSTICK" ]]; then
+  python3 -I "$UNSTICK" "$DISPLAY" ":$DNUM" &
   WATCH_PID=$!
 fi
 
