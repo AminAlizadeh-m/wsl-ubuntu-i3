@@ -114,19 +114,18 @@ Log in with your Linux username and password, and choose the **Xorg** session.
 Run this after i3 is installed (or pick **Zsh + dark theme** from the `i3-wsl.sh` menu). It sets up:
 
 - **git**
-- **zsh** as your login shell, with these plugins:
-  - **zsh-autocomplete:** a completion menu appears as you type. Tab and Shift+Tab move through it, and Up/Down open a history menu.
+- **zsh** as your login shell, with [Oh My Zsh](https://ohmyz.sh), the `robbyrussell` theme and these plugins:
+  - **git:** short aliases (`gst`, `gco`, `gp` and more) and git completion
   - **zsh-autosuggestions:** a grey suggestion from your history as you type. Press Right arrow or End to accept it.
-  - **zsh-completions:** extra Tab completions for many commands.
   - **zsh-syntax-highlighting:** commands turn green when valid and red when not.
-- A prompt showing the folder, the git branch, and a red arrow after a failed command, plus shared history
 - **Alacritty** as the Alt+Enter terminal, in dark colours. Xephyr and xrdp have no GPU, so it runs with software rendering, and falls back to a dark-themed xterm if it can't start
 - **Dark i3:** window borders, a bar at the top, small gaps between windows and the JetBrains Mono font (if available), in the Tokyo Night theme. Switch with `set-theme.sh` (below).
 - **Dark rofi** launcher (Alt+d) and dark GTK apps
 
 Then press **Alt+Shift+r** in i3 to load it.
 
-- zsh-autocomplete and zsh-completions aren't in Ubuntu's package list, so they're downloaded with git from GitHub into `~/.local/share/zsh/plugins`. Running the script again updates them. If the download fails, zsh still works, with normal Tab completion.
+- Your zsh config is [config/zshrc](config/zshrc). The script copies it to `~/.zshrc`, so edit that file in the repo to change it everywhere. It also loads nvm and Go if you have them installed.
+- Oh My Zsh and the two extra plugins are downloaded with git from GitHub. Running the script again updates the plugins. Oh My Zsh updates itself.
 - `chsh` asks for your Linux password. Changing the login shell also changes what Windows Terminal's Ubuntu tab and `wsl` open, so reopen them to get zsh.
 - Files it replaces are backed up once as `<file>.pre-zsh-dark`: `~/.zshrc`, `~/.Xresources`, `~/.config/i3/config`, and the Alacritty and rofi configs.
 - It's safe to run again. Its i3 settings live between `# >>> wsl-dark-theme >>>` markers and are replaced, not duplicated. Put your own i3 changes outside those markers.
@@ -208,7 +207,7 @@ It writes `%USERPROFILE%\.glzr\glazewm\config.yaml`, with the same Alt shortcuts
 You can also pick **Uninstall** from the `i3-wsl.sh` menu. The script:
 
 - Removes polybar, picom and autotiling, and brings back the i3 bar
-- Undoes the zsh + dark theme setup: switches your login shell back to bash first, restores the `.pre-zsh-dark` backups, deletes the downloaded zsh plugins, and removes zsh and Alacritty. It keeps git, since other things use it.
+- Undoes the zsh + dark theme setup: switches your login shell back to bash first, restores the `.pre-zsh-dark` backups, removes Oh My Zsh (only if this project installed it), and removes zsh and Alacritty. It keeps git, since other things use it.
 - Stops and removes xrdp, if it was installed
 - Removes i3, i3status, i3lock, dmenu, rofi and Xephyr
 - Asks separately before removing general X tools (xterm, feh, x11-apps and others), since other Linux GUI apps may use them

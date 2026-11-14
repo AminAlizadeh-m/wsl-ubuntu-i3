@@ -100,7 +100,12 @@ if { [[ ${#zsh_found[@]} -gt 0 ]] || [[ -e "$HOME/.local/bin/i3-term" ]]; } &&
     fi
   done
   rm -f "$HOME/.local/bin/i3-term"
-  # zsh plugins cloned from GitHub
+  # Oh My Zsh, only if this project installed it
+  if [[ -f "$HOME/.oh-my-zsh/.installed-by-wsl-i3" ]]; then
+    rm -rf "$HOME/.oh-my-zsh"
+    echo "==> Removed Oh My Zsh"
+  fi
+  # zsh plugins cloned by an earlier version
   rm -rf "$HOME/.local/share/zsh/plugins/zsh-autocomplete" "$HOME/.local/share/zsh/plugins/zsh-completions"
   rmdir "$HOME/.local/share/zsh/plugins" 2>/dev/null || true
   for v in 3.0 4.0; do
