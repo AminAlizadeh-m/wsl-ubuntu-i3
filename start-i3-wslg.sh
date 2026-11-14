@@ -131,5 +131,24 @@ fi
 
 trap 'kill "$XPID" 2>/dev/null || true' EXIT
 
+# WSLg can hand Xephyr a confused keyboard: Alt counted as always held, so
+# every Enter opens a terminal and every d opens the launcher. Load a clean
+# keyboard layout into Xephyr and release all modifier keys before i3 starts.
+fix_keyboard() {
+  local layout
+  layout="${I3_KB_LAYOUT:-$(setxkbmap -query 2>/dev/null | awk '/^layout:/ {print $2}')}"
+  if command -v setxkbmap >/dev/null 2>&1; then
+    DISPLAY=":$DNUM" setxkbmap "${layout:-us}" 2>/dev/null ||
+      DISPLAY=":$DNUM" setxkbmap us 2>/dev/null || true
+  else
+    echo "    (setxkbmap missing: sudo apt install x11-xkb-utils)"
+  fi
+  if command -v xdotool >/dev/null 2>&1; then
+    DISPLAY=":$DNUM" xdotool keyup Alt_L Alt_R Meta_L Meta_R Super_L Super_R \
+      Control_L Control_R Shift_L Shift_R 2>/dev/null || true
+  fi
+}
+fix_keyboard
+
 echo "==> Launching i3 (modifier is Alt; Alt+Enter = terminal, Alt+Shift+e = exit)"
 DISPLAY=":$DNUM" WAYLAND_DISPLAY= dbus-launch --exit-with-session i3
