@@ -9,7 +9,6 @@
 #   ./i3-wsl.sh zsh                  zsh + dark theme for i3
 #   ./i3-wsl.sh theme [NAME]         switch colour theme
 #   ./i3-wsl.sh polybar [OPTIONS]    polybar, autotiling, picom (--no-polybar, --no-picom)
-#   ./i3-wsl.sh glazewm [--config]   i3-style tiling for Windows itself
 #   ./i3-wsl.sh uninstall [--yes]    remove everything again
 set -euo pipefail
 
@@ -32,10 +31,9 @@ run_method() {
     zsh)     ensure_installed; exec "$DIR/setup-zsh-dark.sh" "$@" ;;
     theme)   exec "$DIR/set-theme.sh" "$@" ;;
     polybar) ensure_installed; exec "$DIR/setup-polybar.sh" "$@" ;;
-    glazewm) exec "$DIR/setup-glazewm.sh" "$@" ;;
     uninstall) exec "$DIR/uninstall-i3.sh" "$@" ;;
-    -h|--help|help) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//' ;;
-    *) echo "Unknown method: $method (use install, wslg, xserver, xrdp, zsh, theme, polybar, glazewm or uninstall)" >&2; exit 1 ;;
+    -h|--help|help) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//' ;;
+    *) echo "Unknown method: $method (use install, wslg, xserver, xrdp, zsh, theme, polybar or uninstall)" >&2; exit 1 ;;
   esac
 }
 
@@ -54,8 +52,7 @@ i3 on WSL: how do you want to run it?
   5) Zsh + dark theme
   6) Change colour theme
   7) Polybar + autotiling + picom (nicer i3)
-  8) GlazeWM: i3-style tiling for Windows
-  9) Uninstall
+  8) Uninstall
   q) Quit
 MENU
 
@@ -81,8 +78,7 @@ case "${choice:-1}" in
     run_method theme "${theme:-catppuccin}"
     ;;
   7) run_method polybar ;;
-  8) run_method glazewm ;;
-  9) run_method uninstall ;;
+  8) run_method uninstall ;;
   q|Q) exit 0 ;;
   *) echo "Invalid choice: $choice" >&2; exit 1 ;;
 esac

@@ -37,7 +37,6 @@ chmod +x *.sh
 ./i3-wsl.sh zsh                  # zsh + dark theme (see below)
 ./i3-wsl.sh theme [NAME]         # switch colour theme (see below)
 ./i3-wsl.sh polybar [OPTIONS]    # nicer i3: polybar, autotiling, picom
-./i3-wsl.sh glazewm [--config]   # i3-style tiling for Windows itself
 ./i3-wsl.sh uninstall [--yes]    # remove everything
 ```
 
@@ -165,37 +164,6 @@ Run it again with different options whenever you change your mind. For example, 
 - **Wallpaper:** copy any image to `~/.wallpaper` and press Alt+Shift+r.
 
 Press Alt+Shift+r in i3 after the first run to start them. Uninstall removes all of this and brings back the i3 bar, keeping your theme.
-
-## GlazeWM: i3-style tiling for Windows
-
-With WSLg, Linux apps open as normal Windows windows. [GlazeWM](https://github.com/glzr-io/glazewm) is a tiling window manager for Windows that works like i3, so it can arrange your Linux and Windows apps together without the i3 window or RDP.
-
-Run this from WSL:
-
-```bash
-./setup-glazewm.sh            # install GlazeWM with winget and write its config
-./setup-glazewm.sh --config   # only rewrite the config (e.g. after set-theme.sh)
-```
-
-It writes `%USERPROFILE%\.glzr\glazewm\config.yaml`, with the same Alt shortcuts as i3 here and border colours from your current theme. An existing config is backed up once as `config.yaml.pre-wsl-i3`. Then start GlazeWM from the Start menu.
-
-| Keys | Action |
-| --- | --- |
-| Alt+Enter | Windows Terminal with your WSL shell |
-| Alt+arrows / Alt+h j k l | Move focus |
-| Alt+Shift+arrows | Move window |
-| Alt+1 … Alt+9 | Switch workspace |
-| Alt+Shift+1 … | Move window to workspace |
-| Alt+v | Change the split direction for the next window |
-| Alt+f / Alt+Shift+Space | Fullscreen / floating |
-| Alt+r | Resize mode (arrows, then Enter) |
-| Alt+Shift+q | Close window |
-| Alt+Shift+p | Pause or resume GlazeWM |
-| Alt+Shift+r / Alt+Shift+e | Reload config / quit GlazeWM |
-
-- **Don't use GlazeWM and i3 at the same time.** GlazeWM takes its Alt shortcuts at the Windows level, so they also fire inside the i3 window and RDP. Press **Alt+Shift+P** to pause GlazeWM while you use i3, and again when you're done. GlazeWM leaves the i3 window and Remote Desktop untiled.
-- **If GlazeWM shows a config error,** delete `config.yaml` and restart GlazeWM to get its default config back. Then tell me the error.
-- **To remove it,** run `winget uninstall GlazeWM` in PowerShell. The WSL uninstall script doesn't touch Windows.
 
 ## Uninstall
 
