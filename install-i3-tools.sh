@@ -156,6 +156,16 @@ EOF
 
 # ---------------------------------------------------------------- wallpaper
 if [[ -n "$WALLPAPER" ]]; then
+  # feh can't show it: usually a web page saved instead of the image itself
+  if ! feh --loadable "$WALLPAPER" >/dev/null 2>&1; then
+    echo "feh can't open $WALLPAPER as an image." >&2
+    if command -v file >/dev/null 2>&1; then
+      echo "It is: $(file -b "$WALLPAPER")" >&2
+    fi
+    echo "If it says HTML, you saved the web page, not the picture: open the image itself" >&2
+    echo "in the browser, right-click it and choose 'Save image as', then run this again." >&2
+    exit 1
+  fi
   if [[ -e "$HOME/.wallpaper" && ! -e "$HOME/.wallpaper.pre-i3-tools" ]]; then
     cp -a "$HOME/.wallpaper" "$HOME/.wallpaper.pre-i3-tools"
   fi
