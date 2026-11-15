@@ -193,6 +193,25 @@ Run it again with different options whenever you change your mind. For example, 
 
 Press Alt+Shift+r in i3 after the first run to start them. Uninstall removes all of this and brings back the i3 bar, keeping your theme.
 
+## Standalone polybar config
+
+[config/polybar/](config/polybar/) has a ready-made polybar config for any i3, including plain i3 from `install-i3-classic.sh`. It shows workspaces, the window title, volume, RAM, CPU, disk, Wi-Fi or Ethernet, battery, a clock and the tray icons. Modules that don't apply to your machine (no battery, no Wi-Fi) turn themselves off.
+
+```bash
+sudo apt install polybar
+mkdir -p ~/.config/polybar
+cp config/polybar/config.ini config/polybar/launch.sh ~/.config/polybar/
+chmod +x ~/.config/polybar/launch.sh
+```
+
+Then in `~/.config/i3/config`, delete or comment out the whole `bar { ... }` block, add this line, and press Mod+Shift+r:
+
+```
+exec_always --no-startup-id ~/.config/polybar/launch.sh
+```
+
+`launch.sh` starts one bar per monitor. The colours are at the top of `config.ini`. Don't combine this with `setup-polybar.sh`, which writes its own `~/.config/polybar/config.ini`.
+
 ## Apps: Chrome, VS Code, Fortinet VPN
 
 ```bash
