@@ -37,6 +37,7 @@ chmod +x *.sh
 ./i3-wsl.sh zsh                  # zsh + dark theme (see below)
 ./i3-wsl.sh theme [NAME]         # switch colour theme (see below)
 ./i3-wsl.sh polybar [OPTIONS]    # nicer i3: polybar, autotiling, picom
+./i3-wsl.sh tools                # autotiling, i3lock, feh, dunst (see below)
 ./i3-wsl.sh chrome               # Google Chrome (also: vscode, openfortivpn)
 ./i3-wsl.sh uninstall [--yes]    # remove everything
 ```
@@ -193,6 +194,23 @@ Run it again with different options whenever you change your mind. For example, 
 
 Press Alt+Shift+r in i3 after the first run to start them. Uninstall removes all of this and brings back the i3 bar, keeping your theme.
 
+## Small tools: autotiling, i3lock, feh, dunst
+
+```bash
+./install-i3-tools.sh                           # install and set up all four
+./install-i3-tools.sh --wallpaper ~/photo.jpg   # also set a wallpaper
+./uninstall-i3-tools.sh                         # undo it
+```
+
+- **autotiling:** new windows alternate between side-by-side and stacked.
+- **i3lock:** **Alt+Shift+x** locks the screen. Type your Linux password and press Enter to unlock.
+- **feh:** sets `~/.wallpaper` as the background, and opens images (`feh picture.png`) in a floating window.
+- **dunst:** desktop notifications, dark, in the top-right corner below the bar. **Alt+n** closes them and **Alt+Shift+n** brings back the last one. Test it with `notify-send "Hello" "from dunst"`. Its settings are in `~/.config/dunst/dunstrc`.
+
+The script adds its lines to `~/.config/i3/config.d/custom.conf` between `# >>> wsl-i3-tools >>>` markers, and checks the config first. If one of those keys is already in use, it puts the file back and tells you. It starts the tools through `~/.local/bin/i3-tools` on every i3 start and restart. If you also use `setup-polybar.sh`, autotiling and the wallpaper are left to that, so nothing runs twice. It works with the standalone polybar below too.
+
+`uninstall-i3-tools.sh` removes the lines, the launcher and the dunstrc (putting back your old one if there was one). It removes only the packages that `install-i3-tools.sh` installed, so i3lock and feh stay if `install-i3.sh` installed them.
+
 ## Standalone polybar config
 
 [config/polybar/](config/polybar/) has a ready-made polybar config for any i3, including plain i3 from `install-i3-classic.sh`. It shows workspaces, the window title, volume, RAM, CPU, disk, Wi-Fi or Ethernet, battery, a clock and the tray icons. Modules that don't apply to your machine (no battery, no Wi-Fi) turn themselves off.
@@ -231,7 +249,7 @@ It stops the theme's bars, removes the `launch.sh --<theme>` line from your i3 c
 ./install-openfortivpn.sh   # openfortivpn, a Fortinet SSL VPN client
 ```
 
-They're also in the `i3-wsl.sh` menu (options 8–10). Chrome and VS Code come from Google's and Microsoft's official apt repositories, so `sudo apt upgrade` keeps them up to date. In i3, open them with **Alt+d** (type `chrome` or `code`).
+They're also in the `i3-wsl.sh` menu (options 9–11). Chrome and VS Code come from Google's and Microsoft's official apt repositories, so `sudo apt upgrade` keeps them up to date. In i3, open them with **Alt+d** (type `chrome` or `code`).
 
 - **Chrome:** only available for 64-bit Intel/AMD machines; on others, use `sudo apt install chromium`. If it shows a black window, start it with `google-chrome --disable-gpu`.
 - **VS Code:** the script turns off hardware acceleration in `~/.vscode/argv.json`, because the i3 window and RDP have no graphics card acceleration. If you also have VS Code on Windows, typing `code` in WSL now opens this Linux version instead.
@@ -247,6 +265,7 @@ They're also in the `i3-wsl.sh` menu (options 8–10). Chrome and VS Code come f
 You can also pick **Uninstall** from the `i3-wsl.sh` menu. The script:
 
 - Asks whether to remove Google Chrome, VS Code and openfortivpn, if installed (your VPN settings file is kept)
+- Undoes `install-i3-tools.sh` (autotiling, i3lock, feh, dunst), if it was run
 - Removes polybar, picom and autotiling, and brings back the i3 bar
 - Undoes the zsh + dark theme setup: switches your login shell back to bash first, restores the `.pre-zsh-dark` backups, puts i3 back to its default colours and plain bar, removes Oh My Zsh (only if this project installed it), and removes zsh and Alacritty. It keeps git, since other things use it.
 - Stops and removes xrdp, if it was installed
@@ -291,6 +310,8 @@ The modifier is **Alt**, not the Win key, because Windows takes most Win-key sho
 | Alt+r | Resize mode (arrows, then Enter) |
 | Alt+Shift+c / Alt+Shift+r | Reload config / restart i3 |
 | Alt+Shift+e | Exit i3 |
+| Alt+Shift+x | Lock the screen (after `install-i3-tools.sh`) |
+| Alt+n / Alt+Shift+n | Close notifications / show the last one (after `install-i3-tools.sh`) |
 
 To customise, see [The i3 config](#the-i3-config). To use the Win key anyway, change `set $mod Mod1` to `set $mod Mod4` in `config/i3/config` and run `./install-i3.sh --config`. This works best with the xrdp option.
 

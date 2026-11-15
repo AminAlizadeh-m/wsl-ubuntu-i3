@@ -51,6 +51,16 @@ if [[ -n "$(installed openfortivpn)" ]] && ask "Remove openfortivpn (your settin
   to_remove+=(openfortivpn)
 fi
 
+# 0. autotiling, i3lock, feh, dunst (install-i3-tools.sh)
+if { [[ -e "$HOME/.local/bin/i3-tools" ]] || [[ -d "$HOME/.local/share/wsl-i3-tools" ]]; } &&
+   ask "Undo install-i3-tools.sh (autotiling, i3lock, feh, dunst)?"; then
+  if [[ $YES -eq 1 ]]; then
+    "$(dirname "$0")/uninstall-i3-tools.sh" --yes
+  else
+    "$(dirname "$0")/uninstall-i3-tools.sh"
+  fi
+fi
+
 # 0a. polybar, picom, autotiling (setup-polybar.sh)
 mapfile -t pb_found < <(installed "${POLYBAR_PKGS[@]}")
 if { [[ ${#pb_found[@]} -gt 0 ]] || [[ -e "$HOME/.config/polybar/.wsl-polybar" ]]; } &&
