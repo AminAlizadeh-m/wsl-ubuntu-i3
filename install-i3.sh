@@ -58,6 +58,9 @@ fi
 install -m 755 "$REPO/tools/i3-term" "$HOME/.local/bin/i3-term"
 # Alt+Shift+f runs this: make the i3 window fill its monitor
 install -m 755 "$REPO/tools/i3-fit" "$HOME/.local/bin/i3-fit"
+# Alt+Shift+d runs these: pick an app in rofi and run it as root
+install -m 755 "$REPO/tools/i3-root-run" "$HOME/.local/bin/i3-root-run"
+install -m 755 "$REPO/tools/i3-askpass" "$HOME/.local/bin/i3-askpass"
 
 # Files the config includes; create the ones that don't exist yet
 [[ -f "$GEN/bar.conf" ]] || cp "$REPO/config/i3/bar.conf" "$GEN/bar.conf"

@@ -65,6 +65,8 @@ exec_always --no-startup-id test -x ~/.local/bin/i3-extras && ~/.local/bin/i3-ex
 
 bindsym $mod+Return exec --no-startup-id $term
 bindsym $mod+d exec --no-startup-id $menu
+# Same menu, but runs the app as root (asks for your password)
+bindsym $mod+Shift+d exec --no-startup-id ~/.local/bin/i3-root-run
 # Switch to any open window by name
 bindsym $mod+grave exec --no-startup-id rofi -show window
 

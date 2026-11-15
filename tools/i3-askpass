@@ -1,0 +1,5 @@
+#!/bin/sh
+# Password prompt in rofi, for "sudo -A" (used by i3-root-run).
+# sudo passes its prompt as $1; the typed password goes to stdout.
+exec rofi -dmenu -password -l 0 -p "Password for sudo" \
+  -mesg "${1:-Your Linux password}" </dev/null

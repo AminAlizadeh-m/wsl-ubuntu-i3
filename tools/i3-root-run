@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Alt+Shift+d: pick an app (or type a command) in rofi and run it as root.
+# rofi asks for your Linux password (through i3-askpass).
+#
+#   i3-root-run               show the rofi menu
+#   i3-root-run CMD [ARGS]    run CMD as root (rofi calls this after you pick)
+#
+# The app gets root's home (/root), so it doesn't leave root-owned files in
+# your own home folder.
+set -uo pipefail
+
+BIN="$(dirname "$(readlink -f "$0")")"
+say() { notify-send "Run as root" "$1" 2>/dev/null || echo "i3-root-run: $1" >&2; }
+
+if [[ $# -eq 0 ]]; then
+  exec rofi -show drun -modi drun,run \
+    -display-drun "root app" -display-run "root command" \
+    -run-command "$BIN/i3-root-run {cmd}"
+fi
+
+case "$(basename "$1")" in
+  google-chrome*|chrome|chromium*|firefox*)
+    say "Browsers refuse to run as root, and they shouldn't: open it normally."
+    exit 1 ;;
+  code)
+    # VS Code needs its own settings folder and no sandbox to run as root
+    set -- "$@" --no-sandbox --user-data-dir=/root/.vscode-root ;;
+esac
+
+export SUDO_ASKPASS="$BIN/i3-askpass"
+# Only what the app needs to open its window in i3
+sudo -A env HOME=/root DISPLAY="$DISPLAY" XAUTHORITY="${XAUTHORITY:-}" \
+  XCURSOR_THEME="${XCURSOR_THEME:-}" XCURSOR_SIZE="${XCURSOR_SIZE:-}" \
+  NO_AT_BRIDGE=1 "$@"
+status=$?
+# 1 = wrong password or cancelled (the app's own errors usually differ)
+[[ $status -eq 1 ]] && say "Didn't run $1 as root (wrong password, cancelled, or it failed)."
+exit $status

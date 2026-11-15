@@ -309,6 +309,7 @@ The modifier is **Alt**, not the Win key, because Windows takes most Win-key sho
 | --- | --- |
 | Alt+Enter | Terminal |
 | Alt+d | App launcher (rofi) |
+| Alt+Shift+d | Same launcher, but runs the app as root: rofi asks for your Linux password. Switch to typing any command with Ctrl+Tab. Browsers refuse; VS Code gets its own root settings folder. |
 | Alt+` | Switch to any open window by name |
 | Alt+Shift+q | Close window |
 | Alt+arrows / Alt+j k l ; | Move focus |

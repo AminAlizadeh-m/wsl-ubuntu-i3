@@ -165,7 +165,8 @@ fi
 mapfile -t core_found < <(installed "${CORE_PKGS[@]}")
 if [[ ${#core_found[@]} -gt 0 ]] && ask "Remove i3, i3status, i3lock, dmenu, rofi and Xephyr?"; then
   to_remove+=("${core_found[@]}")
-  rm -f "$HOME/.local/bin/i3-term" "$HOME/.local/bin/i3-fit"
+  rm -f "$HOME/.local/bin/i3-term" "$HOME/.local/bin/i3-fit" \
+        "$HOME/.local/bin/i3-root-run" "$HOME/.local/bin/i3-askpass"
 fi
 
 # 3. General X tools (other GUI apps may use these, so ask separately)
