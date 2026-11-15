@@ -39,6 +39,7 @@ chmod +x *.sh
 ./i3-wsl.sh polybar [OPTIONS]    # nicer i3: polybar, autotiling, picom
 ./i3-wsl.sh tools                # autotiling, i3lock, feh, dunst (see below)
 ./i3-wsl.sh chrome               # Google Chrome (also: vscode, openfortivpn)
+./i3-wsl.sh certs "CA NAME"      # trust a Windows CA (company network, see below)
 ./i3-wsl.sh uninstall [--yes]    # remove everything
 ```
 
@@ -268,6 +269,22 @@ They're also in the `i3-wsl.sh` menu (options 9–11). Chrome and VS Code come f
 - **VS Code:** the script turns off hardware acceleration in `~/.vscode/argv.json`, because the i3 window and RDP have no graphics card acceleration. If you also have VS Code on Windows, typing `code` in WSL now opens this Linux version instead.
 - **Links and sign-ins open in Linux Chrome:** inside i3, links that apps open (for example VS Code's **Sign in with GitHub**) go to Chrome in i3, not to your Windows browser. That's needed for sign-ins: the browser has to hand the result back to the Linux VS Code. Outside i3, links from the WSL terminal still open on Windows. This works when i3 is started by `start-i3-wslg.sh` or `start-i3-windows-xserver.sh`, or over xrdp after running `setup-xrdp.sh` again. With no Linux Chrome or Chromium installed, links keep opening on Windows.
 - **openfortivpn:** the script creates `~/.config/openfortivpn/config`, readable only by you. Fill in `host` and `username`, then connect with `sudo openfortivpn -c ~/.config/openfortivpn/config` and disconnect with Ctrl+C. Leave the password out to be asked each time. On the first connection it may print the server's certificate fingerprint; add it as `trusted-cert` once your IT team confirms it. The VPN covers WSL and the apps in i3, not Windows itself.
+
+## Company network: trust a Windows CA certificate
+
+Some company networks re-sign HTTPS traffic with their own CA. Windows trusts that CA, but Ubuntu doesn't, so `apt`, `curl`, `git` and `pip` fail with "certificate verify failed". This script copies the CA from Windows into Ubuntu:
+
+```bash
+./import-windows-certs.sh --list              # the CAs Windows trusts
+./import-windows-certs.sh "Company CA name"   # clean up, then import it
+```
+
+- **The name** is the certificate's name as Windows shows it (`certmgr.msc`, "Issued To"); part of the name is enough. The certificates that issued it are imported too.
+- **Cleaning first:** it removes the certificates added to Ubuntu by hand (in `/usr/local/share/ca-certificates`), turns back on any built-in ones that were turned off, and rebuilds Ubuntu's list. It asks first and keeps a backup in `~/.local/share/wsl-certs-backup`. Ubuntu's built-in certificates are never removed. Skip this with `--no-clean`, or only clean with `--clean`.
+- **Chrome and VS Code** keep their own list (`~/.pki/nssdb`), so the certificate is added there too. Restart them afterwards.
+- **Node and Python** use their own lists as well. Point them at Ubuntu's in `~/.zshrc`: `export NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt` and `export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt`.
+
+It's also option 12 in the `i3-wsl.sh` menu.
 
 ## Uninstall
 
