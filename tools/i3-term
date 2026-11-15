@@ -2,13 +2,26 @@
 # Terminal for i3's Alt+Enter (installed to ~/.local/bin/i3-term by install-i3.sh).
 # Uses Alacritty if it's installed, with software rendering because the i3
 # window and RDP have no GPU. Falls back to xterm if Alacritty can't start.
+# Why Alacritty didn't start is written to ~/.cache/i3-term.log.
+LOG="${XDG_CACHE_HOME:-$HOME/.cache}/i3-term.log"
+why=""
+mkdir -p "$(dirname "$LOG")" 2>/dev/null
 if command -v alacritty >/dev/null 2>&1; then
   export LIBGL_ALWAYS_SOFTWARE=1
   start=$(date +%s)
-  alacritty "$@" && exit 0
-  # Alacritty exited with an error: only fall back if it died right away
-  [ $(( $(date +%s) - start )) -ge 3 ] && exit 0
+  alacritty "$@" 2>"$LOG.$$"
+  rc=$?
+  # Fall back only if Alacritty failed right away (not when it's closed later)
+  if [ $rc -eq 0 ] || [ $(( $(date +%s) - start )) -ge 3 ]; then
+    rm -f "$LOG.$$"; exit $rc
+  fi
+  mv -f "$LOG.$$" "$LOG"
+  why="Alacritty failed to start (see $LOG)"
+else
+  why="Alacritty isn't installed (sudo apt install alacritty, or ./setup-zsh-dark.sh)"
+  echo "$why" > "$LOG" 2>/dev/null
 fi
+notify-send "Opened xterm instead of Alacritty" "$why" 2>/dev/null || true
 # xterm: Ctrl+Shift+C / Ctrl+Shift+V copy and paste, like other terminals, and
 # selecting text copies it too
 if command -v xterm >/dev/null 2>&1; then
