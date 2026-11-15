@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Share the clipboard between i3 (Xephyr) and Windows.
+# Xephyr is a separate X server with its own clipboard, so text copied in i3
+# never reached Windows and the other way round. This copies text across
+# whenever either side changes. WSLg's display already shares its clipboard
+# with Windows, so syncing with it is enough.
+#
+# Usage: clip-bridge HOST_DISPLAY NESTED_DISPLAY   (started by start-i3-wslg.sh)
+# Text only; images aren't copied.
+set -uo pipefail
+
+HOST="$1"; NESTED="$2"
+command -v xclip >/dev/null 2>&1 || exit 0
+
+get() { timeout 2 xclip -display "$1" -selection clipboard -o 2>/dev/null; }
+put() { printf '%s' "$2" | timeout 2 xclip -display "$1" -selection clipboard -i >/dev/null 2>&1; }
+
+last="$(get "$HOST")"
+while DISPLAY="$NESTED" xdpyinfo >/dev/null 2>&1; do
+  now="$(get "$NESTED")"
+  if [[ -n "$now" && "$now" != "$last" ]]; then
+    put "$HOST" "$now"; last="$now"
+  else
+    now="$(get "$HOST")"
+    if [[ -n "$now" && "$now" != "$last" ]]; then
+      put "$NESTED" "$now"; last="$now"
+    fi
+  fi
+  sleep 0.5
+done

@@ -26,7 +26,7 @@ if [[ $ONLY_CONFIG -eq 0 ]]; then
   sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
     i3 i3status i3lock dmenu rofi \
     xserver-xephyr xinit x11-xserver-utils x11-utils x11-apps \
-    xterm dbus-x11 feh x11-xkb-utils xdotool \
+    xterm dbus-x11 feh x11-xkb-utils xdotool xclip \
     fonts-dejavu-core fonts-noto-color-emoji \
     iproute2
 fi

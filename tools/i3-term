@@ -9,7 +9,11 @@ if command -v alacritty >/dev/null 2>&1; then
   # Alacritty exited with an error: only fall back if it died right away
   [ $(( $(date +%s) - start )) -ge 3 ] && exit 0
 fi
+# xterm: Ctrl+Shift+C / Ctrl+Shift+V copy and paste, like other terminals, and
+# selecting text copies it too
 if command -v xterm >/dev/null 2>&1; then
-  exec xterm "$@"
+  exec xterm -xrm 'XTerm*selectToClipboard: true' \
+    -xrm 'XTerm*VT100.Translations: #override Ctrl Shift <Key>C: copy-selection(CLIPBOARD) \n Ctrl Shift <Key>V: insert-selection(CLIPBOARD)' \
+    "$@"
 fi
 exec i3-sensible-terminal "$@"

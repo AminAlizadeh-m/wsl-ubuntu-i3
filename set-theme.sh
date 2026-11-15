@@ -172,6 +172,10 @@ cat > "$AL_CFG" <<EOF
 [window]
 padding = { x = 8, y = 6 }
 
+# Selecting text copies it (Ctrl+Shift+C copies too, Ctrl+Shift+V pastes)
+[selection]
+save_to_clipboard = true
+
 [font]
 size = 11.0
 normal = { family = "$FONT" }

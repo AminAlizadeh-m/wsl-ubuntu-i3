@@ -329,6 +329,8 @@ The modifier is **Alt**, not the Win key, because Windows takes most Win-key sho
 | Alt+Shift+x | Lock the screen (after `install-i3-tools.sh`) |
 | Alt+n / Alt+Shift+n | Close notifications / show the last one (after `install-i3-tools.sh`) |
 
+**Copy and paste in the terminal:** select text to copy it, or press **Ctrl+Shift+C**; paste with **Ctrl+Shift+V**. Ctrl+C stops the running program, as in every Linux terminal. With option 1, text you copy in i3 can be pasted in Windows and the other way round (text only; needs `xclip`, which `install-i3.sh` installs). VcXsrv/X410 and Remote Desktop share the clipboard themselves. After updating, run `./set-theme.sh <theme>` once so Alacritty copies on select.
+
 To customise, see [The i3 config](#the-i3-config). To use the Win key anyway, change `set $mod Mod1` to `set $mod Mod4` in `config/i3/config` and run `./install-i3.sh --config`. This works best with the xrdp option.
 
 ## Troubleshooting

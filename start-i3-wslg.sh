@@ -354,6 +354,15 @@ if command -v xdotool >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1 && [
   WATCH_PID=$!
 fi
 
+# Xephyr has its own clipboard: copy text between it and Windows (WSLg)
+CLIP_BRIDGE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/tools/clip-bridge"
+if command -v xclip >/dev/null 2>&1 && [[ -x "$CLIP_BRIDGE" ]]; then
+  "$CLIP_BRIDGE" "$DISPLAY" ":$DNUM" &
+  WATCH_PID="$WATCH_PID $!"
+else
+  echo "    (Clipboard isn't shared with Windows: sudo apt install xclip)"
+fi
+
 # Apps started from i3 (Chrome, VS Code, ...) use the same cursor. The I3_WSL_*
 # variables tell i3-fit (Alt+Shift+f) where the i3 window is.
 CURSOR_ENV=(I3_WSL_HOST_DISPLAY="$DISPLAY" I3_WSL_TITLE="$TITLE" I3_WSL_WINDOWS="$WINDOWS")
