@@ -86,7 +86,7 @@ The config lives in the repo as [config/i3/config](config/i3/config), organised 
   ./start-i3-wslg.sh auto --windows 2   # two windows; side by side if you have one monitor
   ```
   In this mode the windows can't be resized after they open (i3's layout is fixed at start), and polybar only shows in window 1; the i3 bar shows in all of them.
-- **Multiple monitors:** i3's screen size is set when it starts, from your primary monitor unless you choose with `--monitor`. If you drag the window to a monitor with a different size, **maximize it there** (double-click the title bar) and i3 resizes to fit. Fullscreen windows can't be resized that way, so for those, quit i3 (Alt+Shift+e) and start it again with `--monitor`.
+- **Multiple monitors:** i3's screen size is set when it starts, from your primary monitor unless you choose with `--monitor`. If you drag the window to a monitor with a different size, press **Alt+Shift+f** in i3: the window fills the monitor it's on (fullscreen, no frame) and i3 resizes to fit. Press it again to get a normal window back, at 90% of that monitor. Maximizing the window there (double-click the title bar) works too. Alt+Shift+f isn't available with `--windows`, whose layout is fixed at start.
 
 - The monitor size comes from WSLg (`xrandr`). You can also resize or maximize the window afterwards, and i3 adapts to the new size.
 - Press **Ctrl+Shift** inside the window to grab the keyboard so Alt shortcuts go to i3. Press it again to release.
@@ -317,6 +317,7 @@ The modifier is **Alt**, not the Win key, because Windows takes most Win-key sho
 | Alt+h / Alt+v | Open the next window beside / below |
 | Alt+w / Alt+s / Alt+e | Tabbed / stacked / side-by-side layout |
 | Alt+f | Fullscreen |
+| Alt+Shift+f | Fit the i3 window to the monitor it's on / back to a normal window (option 1) |
 | Alt+Shift+Space / Alt+Space | Float or tile a window / switch focus between them |
 | Alt+Shift+- / Alt+- | Park a window in the scratchpad / bring it back |
 | Alt+o / Alt+Shift+o / Alt+Ctrl+o | With `--windows`: focus the next window / move a window there / move the workspace there |

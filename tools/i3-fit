@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# Alt+Shift+f: make the i3 window (Xephyr, started by start-i3-wslg.sh) fill
+# the Windows monitor it's on, so i3 resizes to that monitor. Handy after you
+# drag the window to another monitor. Press again to get a normal window back.
+#
+# Runs inside i3; start-i3-wslg.sh tells it (through environment variables)
+# which display is WSLg's and what the window is called.
+set -uo pipefail
+
+say() {  # show a message as a notification if possible, else on stderr
+  notify-send "i3-fit" "$1" 2>/dev/null || echo "i3-fit: $1" >&2
+}
+
+HOST="${I3_WSL_HOST_DISPLAY:-}"
+TITLE="${I3_WSL_TITLE:-i3 (WSL)}"
+NESTED="${DISPLAY:-:1}"
+if [[ -z "$HOST" ]]; then
+  say "Only works when i3 was started with start-i3-wslg.sh (option 1)."
+  exit 1
+fi
+if [[ "${I3_WSL_WINDOWS:-1}" != 1 ]]; then
+  say "Not available with --windows: that layout is fixed when i3 starts."
+  exit 1
+fi
+command -v xdotool >/dev/null 2>&1 || { say "Needs xdotool: sudo apt install xdotool"; exit 1; }
+
+# Let go of Alt+Shift first: once the window is hidden for a moment, the key
+# releases would never reach i3 and Alt would stay "held".
+sleep 0.3
+
+# Everything below talks to WSLg's display, where the i3 window lives
+host() { DISPLAY="$HOST" "$@"; }
+xdotool() { DISPLAY="$HOST" command xdotool "$@"; }
+regex="^$(printf '%s' "$TITLE" | sed 's/[][\.*^$()+?{}|]/\\&/g')\$"
+id="$(xdotool search --name "$regex" 2>/dev/null | head -1)"
+if [[ -z "$id" ]]; then
+  say "Couldn't find the i3 window on $HOST."
+  exit 1
+fi
+
+# Where is the window now? (its centre decides the monitor)
+eval "$(xdotool getwindowgeometry --shell "$id" 2>/dev/null)"
+cx=$(( ${X:-0} + ${WIDTH:-0} / 2 )); cy=$(( ${Y:-0} + ${HEIGHT:-0} / 2 ))
+
+# Monitors as "WIDTH HEIGHT X Y", from lines like " 0: +*rdp-0 1920/518x1200/324+0+0  rdp-0"
+mapfile -t mons < <(host xrandr --listmonitors 2>/dev/null |
+  awk 'NR > 1 { split($3, a, /[\/x+]/); print a[1], a[3], a[5] + 0, a[6] + 0 }')
+mon=""
+for m in "${mons[@]}"; do
+  read -r mw mh mx my <<<"$m"
+  if (( cx >= mx && cx < mx + mw && cy >= my && cy < my + mh )); then mon="$m"; break; fi
+done
+[[ -z "$mon" ]] && mon="${mons[0]:-}"
+if [[ -z "$mon" ]]; then
+  say "Couldn't read the monitor layout from WSLg."
+  exit 1
+fi
+read -r mw mh mx my <<<"$mon"
+
+is_fullscreen() { host xprop -id "$id" _NET_WM_STATE 2>/dev/null | grep -q _NET_WM_STATE_FULLSCREEN; }
+
+# WSLg ignores fullscreen requests for a window that's already open; it only
+# reads the flag when the window appears. So hide it, change the flag, show it.
+set_fullscreen() {  # set_fullscreen 1|0
+  host timeout 3 xdotool windowunmap --sync "$id" 2>/dev/null || xdotool windowunmap "$id" 2>/dev/null
+  if [[ $1 -eq 1 ]]; then
+    host xprop -id "$id" -f _NET_WM_STATE 32a -set _NET_WM_STATE _NET_WM_STATE_FULLSCREEN 2>/dev/null
+  else
+    host xprop -id "$id" -remove _NET_WM_STATE 2>/dev/null
+  fi
+  host timeout 3 xdotool windowmap --sync "$id" 2>/dev/null || xdotool windowmap "$id" 2>/dev/null
+  if [[ $1 -eq 1 ]]; then
+    xdotool windowstate --add FULLSCREEN "$id" 2>/dev/null
+  else
+    xdotool windowstate --remove FULLSCREEN "$id" 2>/dev/null
+  fi
+}
+if is_fullscreen; then
+  # Back to a window at 90% of this monitor, centred
+  set_fullscreen 0
+  w=$(( mw * 9 / 10 )); h=$(( mh * 9 / 10 ))
+  xdotool windowsize "$id" "$w" "$h" 2>/dev/null
+  xdotool windowmove "$id" $(( mx + (mw - w) / 2 )) $(( my + (mh - h) / 2 )) 2>/dev/null
+else
+  # Onto this monitor, then fullscreen there. Also set the size directly, in
+  # case the fullscreen flag is ignored.
+  xdotool windowmove "$id" "$mx" "$my" 2>/dev/null
+  xdotool windowsize "$id" "$mw" "$mh" 2>/dev/null
+  set_fullscreen 1
+fi
+
+# Make sure i3 doesn't think Alt or Shift is still held
+DISPLAY="$NESTED" command xdotool keyup Alt_L Alt_R Shift_L Shift_R Control_L Control_R Super_L Super_R 2>/dev/null
+exit 0

@@ -98,6 +98,10 @@ bindsym $mod+o       focus output next
 bindsym $mod+Shift+o move container to output next
 bindsym $mod+Ctrl+o  move workspace to output next
 
+# Fill the Windows monitor the i3 window is on (after dragging it to another
+# monitor); press again for a normal window. Only with start-i3-wslg.sh.
+bindsym $mod+Shift+f exec --no-startup-id ~/.local/bin/i3-fit
+
 # ---------------------------------------------------------------- layout
 
 # Where the next window opens: beside (h) or below (v) the current one

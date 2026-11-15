@@ -135,12 +135,16 @@ if display_alive; then
 fi
 clean_stale
 
+TITLE="${I3_TITLE:-i3 (WSL)}"
+# The title as a regular expression, to find the window(s) with xdotool
+TITLE_RE="^$(printf '%s' "$TITLE" | sed 's/[][\.*^$()+?{}|]/\\&/g')\$"
+
 # start_xephyr <screen args...>: start Xephyr and wait until it really answers.
 start_xephyr() {
   # -noreset: keep running (and keep the keyboard setup) when a short-lived
   # client like xdpyinfo or setxkbmap disconnects. The EXIT trap stops Xephyr.
   Xephyr ":$DNUM" "$@" -ac -br -noreset ${DPI:+-dpi "$DPI"} \
-    -title "${I3_TITLE:-i3 (WSL)}" >"/tmp/xephyr-$DNUM.log" 2>&1 &
+    -title "$TITLE" >"/tmp/xephyr-$DNUM.log" 2>&1 &
   XPID=$!
   for _ in $(seq 1 100); do
     kill -0 "$XPID" 2>/dev/null || return 1
@@ -157,8 +161,8 @@ WIN_X=(); WIN_Y=(); WIN_FULL=()
 # ---------------------------------------------------------------- one window
 if [[ $WINDOWS -eq 1 ]]; then
   echo "==> Starting Xephyr on :$DNUM ($SIZE$([[ $FULLSCREEN -eq 1 ]] && echo ', fullscreen')${MON_OUTPUT:+ on $MON_OUTPUT})  -- press Ctrl+Shift to grab/release keyboard"
-  echo "    Moving the window to another monitor? Maximize it there and i3 resizes,"
-  echo "    or start on that monitor:  $0 full --monitor N   (list: $0 --monitors)"
+  echo "    Moved the window to another monitor? Press Alt+Shift+f in i3 to fill that"
+  echo "    monitor (again for a normal window), or maximize it there."
 
   XARGS=(-screen "$SIZE" -resizeable)
   # Fullscreen on the primary monitor: Xephyr can do that itself. On another
@@ -243,7 +247,7 @@ if [[ ${#WIN_X[@]} -gt 0 ]]; then
   if command -v xdotool >/dev/null 2>&1; then
     WIDS=()
     for _ in $(seq 1 50); do
-      mapfile -t WIDS < <(xdotool search --name '^i3 \(WSL\)$' 2>/dev/null | sort -n)
+      mapfile -t WIDS < <(xdotool search --name "$TITLE_RE" 2>/dev/null | sort -n)
       (( ${#WIDS[@]} >= ${#WIN_X[@]} )) && break
       sleep 0.1
     done
@@ -330,9 +334,10 @@ if command -v xdotool >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1 && [
   WATCH_PID=$!
 fi
 
-# Apps started from i3 (Chrome, VS Code, ...) use the same cursor
-CURSOR_ENV=()
-[[ -n "$CURSOR_THEME" ]] && CURSOR_ENV=(XCURSOR_THEME="$CURSOR_THEME" XCURSOR_SIZE="$CURSOR_SIZE")
+# Apps started from i3 (Chrome, VS Code, ...) use the same cursor. The I3_WSL_*
+# variables tell i3-fit (Alt+Shift+f) where the i3 window is.
+CURSOR_ENV=(I3_WSL_HOST_DISPLAY="$DISPLAY" I3_WSL_TITLE="$TITLE" I3_WSL_WINDOWS="$WINDOWS")
+[[ -n "$CURSOR_THEME" ]] && CURSOR_ENV+=(XCURSOR_THEME="$CURSOR_THEME" XCURSOR_SIZE="$CURSOR_SIZE")
 echo "==> Launching i3 (modifier is Alt; Alt+Enter = terminal, Alt+Shift+e = exit)"
 I3_ARGS=()
 # With several windows RandR reports only one monitor, so i3 must read the
