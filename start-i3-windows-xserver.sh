@@ -32,5 +32,12 @@ if ! timeout 3 xset q >/dev/null 2>&1; then
   exit 1
 fi
 
+# Links opened from apps in i3 (e.g. VS Code's "Sign in with GitHub") go to a
+# Linux browser in i3 instead of Windows' browser (see tools/i3-browser-env).
+BROWSER_ENV="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/tools/i3-browser-env"
+if [[ -x "$BROWSER_ENV" ]]; then
+  while IFS= read -r kv; do export "${kv?}"; done < <("$BROWSER_ENV")
+fi
+
 echo "==> Launching i3 (modifier is Alt; Alt+Enter = terminal, Alt+Shift+e = exit)"
 exec dbus-launch --exit-with-session i3

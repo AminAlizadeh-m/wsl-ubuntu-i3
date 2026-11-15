@@ -358,6 +358,13 @@ fi
 # variables tell i3-fit (Alt+Shift+f) where the i3 window is.
 CURSOR_ENV=(I3_WSL_HOST_DISPLAY="$DISPLAY" I3_WSL_TITLE="$TITLE" I3_WSL_WINDOWS="$WINDOWS")
 [[ -n "$CURSOR_THEME" ]] && CURSOR_ENV+=(XCURSOR_THEME="$CURSOR_THEME" XCURSOR_SIZE="$CURSOR_SIZE")
+# Links opened from apps in i3 (e.g. VS Code's "Sign in with GitHub") go to a
+# Linux browser in i3 instead of Windows' browser (see tools/i3-browser-env).
+I3_BROWSER_ENV="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/tools/i3-browser-env"
+if [[ -x "$I3_BROWSER_ENV" ]]; then
+  mapfile -t browser_env < <("$I3_BROWSER_ENV")
+  CURSOR_ENV+=("${browser_env[@]}")
+fi
 echo "==> Launching i3 (modifier is Alt; Alt+Enter = terminal, Alt+Shift+e = exit)"
 I3_ARGS=()
 # With several windows RandR reports only one monitor, so i3 must read the

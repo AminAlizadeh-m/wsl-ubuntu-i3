@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Print the environment that makes links opened inside i3 go to a Linux
+# browser (Chrome or Chromium) in i3, one VAR=value per line. Prints nothing
+# if no Linux browser is installed, so links keep opening on Windows.
+#
+# Why: on WSL, xdg-open (which VS Code, the terminal etc. use to open links)
+# always hands links to Windows' browser. VS Code's "Sign in with GitHub" then
+# opens on Windows, and the sign-in can't get back to VS Code in i3.
+# XDG_CURRENT_DESKTOP=X-Generic makes xdg-open use the Linux default browser.
+# Outside i3 nothing changes: there xdg-open keeps using Windows' browser.
+#
+# Used by start-i3-wslg.sh and start-i3-windows-xserver.sh.
+set -uo pipefail
+
+browser=""; desktop=""
+for b in google-chrome-stable:google-chrome google-chrome:google-chrome \
+         chromium:chromium chromium-browser:chromium-browser; do
+  if command -v "${b%%:*}" >/dev/null 2>&1; then
+    browser="${b%%:*}"; desktop="${b#*:}.desktop"
+    break
+  fi
+done
+[[ -n "$browser" ]] || exit 0
+
+# Make it the default for web links, unless a Linux browser already is
+# (this only affects xdg-open inside i3; see above).
+if command -v xdg-mime >/dev/null 2>&1 && [[ -f "/usr/share/applications/$desktop" ]]; then
+  current="$(XDG_CURRENT_DESKTOP=X-Generic xdg-mime query default x-scheme-handler/https 2>/dev/null)"
+  if [[ -z "$current" || "$current" == *wsl* ]]; then
+    XDG_CURRENT_DESKTOP=X-Generic xdg-mime default "$desktop" \
+      x-scheme-handler/http x-scheme-handler/https text/html 2>/dev/null
+  fi
+fi
+
+echo "XDG_CURRENT_DESKTOP=X-Generic"
+echo "BROWSER=$browser"

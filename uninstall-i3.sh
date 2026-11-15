@@ -194,7 +194,7 @@ fi
 # 4. ~/.xsession written by setup-xrdp.sh (only if it's unchanged)
 XS="$HOME/.xsession"
 if [[ -f "$XS" ]]; then
-  if grep -qx 'exec dbus-launch --exit-with-session i3' "$XS" && [[ $(wc -l <"$XS") -le 4 ]]; then
+  if grep -qx 'exec dbus-launch --exit-with-session i3' "$XS" && [[ $(wc -l <"$XS") -le 8 ]]; then
     rm -f "$XS"
     echo "==> Removed $XS"
   else

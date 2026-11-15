@@ -266,6 +266,7 @@ They're also in the `i3-wsl.sh` menu (options 9–11). Chrome and VS Code come f
 
 - **Chrome:** only available for 64-bit Intel/AMD machines; on others, use `sudo apt install chromium`. If it shows a black window, start it with `google-chrome --disable-gpu`.
 - **VS Code:** the script turns off hardware acceleration in `~/.vscode/argv.json`, because the i3 window and RDP have no graphics card acceleration. If you also have VS Code on Windows, typing `code` in WSL now opens this Linux version instead.
+- **Links and sign-ins open in Linux Chrome:** inside i3, links that apps open (for example VS Code's **Sign in with GitHub**) go to Chrome in i3, not to your Windows browser. That's needed for sign-ins: the browser has to hand the result back to the Linux VS Code. Outside i3, links from the WSL terminal still open on Windows. This works when i3 is started by `start-i3-wslg.sh` or `start-i3-windows-xserver.sh`, or over xrdp after running `setup-xrdp.sh` again. With no Linux Chrome or Chromium installed, links keep opening on Windows.
 - **openfortivpn:** the script creates `~/.config/openfortivpn/config`, readable only by you. Fill in `host` and `username`, then connect with `sudo openfortivpn -c ~/.config/openfortivpn/config` and disconnect with Ctrl+C. Leave the password out to be asked each time. On the first connection it may print the server's certificate fingerprint; add it as `trusted-cert` once your IT team confirms it. The VPN covers WSL and the apps in i3, not Windows itself.
 
 ## Uninstall

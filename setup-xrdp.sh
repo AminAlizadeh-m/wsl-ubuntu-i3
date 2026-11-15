@@ -27,6 +27,10 @@ cat > "$HOME/.xsession" <<'XS'
 #!/bin/sh
 unset WAYLAND_DISPLAY
 unset DBUS_SESSION_BUS_ADDRESS
+# Open links in a Linux browser in i3, not in Windows' browser
+for b in google-chrome-stable chromium chromium-browser; do
+  command -v "$b" >/dev/null 2>&1 && export BROWSER="$b" XDG_CURRENT_DESKTOP=X-Generic && break
+done
 exec dbus-launch --exit-with-session i3
 XS
 chmod +x "$HOME/.xsession"
