@@ -10,14 +10,18 @@
 #                      as a monitor. Window 1 goes on your primary monitor, the
 #                      others on your other monitors (or side by side if you
 #                      have fewer monitors than windows).
+#   --dpi N            font scaling: 96 is normal, 120 = 125%, 144 = 150%
 #   Without --monitor, your primary Windows monitor is used.
+#   Look (also as environment variables, e.g. I3_DPI=120 ./start-i3-wslg.sh):
+#     I3_TITLE         window title (default "i3 (WSL)")
+#     I3_CURSOR_THEME  mouse cursor theme (default Adwaita), I3_CURSOR_SIZE (24)
 #   e.g. ./start-i3-wslg.sh full --monitor 2
 #        ./start-i3-wslg.sh full --monitor largest
 #        ./start-i3-wslg.sh full --windows 2
 #        ./start-i3-wslg.sh 2560x1440 2
 set -euo pipefail
 
-MODE="auto"; DNUM="1"; MONITOR=""; LIST=0; WINDOWS=1
+MODE="auto"; DNUM="1"; MONITOR=""; LIST=0; WINDOWS=1; DPI="${I3_DPI:-}"
 pos=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -26,10 +30,17 @@ while [[ $# -gt 0 ]]; do
     --monitors)  LIST=1 ;;
     --windows)   WINDOWS="${2:?--windows needs a number}"; shift ;;
     --windows=*) WINDOWS="${1#*=}" ;;
+    --dpi)       DPI="${2:?--dpi needs a number, e.g. 120}"; shift ;;
+    --dpi=*)     DPI="${1#*=}" ;;
     *) if [[ $pos -eq 0 ]]; then MODE="$1"; else DNUM="$1"; fi; pos=$((pos + 1)) ;;
   esac
   shift
 done
+
+if [[ -n "$DPI" ]] && ! [[ "$DPI" =~ ^[0-9]{2,3}$ ]]; then
+  echo "--dpi must be a number like 96, 120 or 144." >&2
+  exit 1
+fi
 
 if ! [[ "$WINDOWS" =~ ^[1-4]$ ]]; then
   echo "--windows must be 1, 2, 3 or 4." >&2
@@ -128,8 +139,8 @@ clean_stale
 start_xephyr() {
   # -noreset: keep running (and keep the keyboard setup) when a short-lived
   # client like xdpyinfo or setxkbmap disconnects. The EXIT trap stops Xephyr.
-  Xephyr ":$DNUM" "$@" -ac -br -noreset \
-    -title "i3 (WSL)" >"/tmp/xephyr-$DNUM.log" 2>&1 &
+  Xephyr ":$DNUM" "$@" -ac -br -noreset ${DPI:+-dpi "$DPI"} \
+    -title "${I3_TITLE:-i3 (WSL)}" >"/tmp/xephyr-$DNUM.log" 2>&1 &
   XPID=$!
   for _ in $(seq 1 100); do
     kill -0 "$XPID" 2>/dev/null || return 1
@@ -278,6 +289,36 @@ release_modifiers() {
 }
 fix_keyboard
 
+# Make the empty i3 window look finished before i3 draws anything: a normal
+# arrow cursor instead of X's big cross, the theme's background colour
+# instead of black, and smooth (anti-aliased) fonts.
+CURSOR_THEME="${I3_CURSOR_THEME:-Adwaita}"
+CURSOR_SIZE="${I3_CURSOR_SIZE:-24}"
+[[ -d "/usr/share/icons/$CURSOR_THEME/cursors" || -d "$HOME/.icons/$CURSOR_THEME/cursors" ]] || CURSOR_THEME=""
+style_display() {
+  local bg
+  bg="$(sed -n 's/^exec_always --no-startup-id xsetroot -solid "\(#[0-9A-Fa-f]\{6\}\)".*/\1/p' \
+        "$HOME/.config/i3/generated/theme.conf" 2>/dev/null | head -1)"
+  if command -v xrdb >/dev/null 2>&1; then
+    {
+      echo "Xft.antialias: 1"
+      echo "Xft.hinting: 1"
+      echo "Xft.hintstyle: hintslight"
+      echo "Xft.rgba: rgb"
+      echo "Xft.lcdfilter: lcddefault"
+      [[ -n "$DPI" ]] && echo "Xft.dpi: $DPI"
+      if [[ -n "$CURSOR_THEME" ]]; then
+        echo "Xcursor.theme: $CURSOR_THEME"
+        echo "Xcursor.size: $CURSOR_SIZE"
+      fi
+    } | DISPLAY=":$DNUM" xrdb -nocpp -merge - 2>/dev/null || true
+  fi
+  if command -v xsetroot >/dev/null 2>&1; then
+    DISPLAY=":$DNUM" xsetroot -cursor_name left_ptr ${bg:+-solid "$bg"} 2>/dev/null || true
+  fi
+}
+style_display
+
 # Keys released while another window has focus (e.g. Alt+Tab to a Windows
 # app) never reach Xephyr, so Alt stays held: every d opens the launcher and
 # every Enter a terminal. tools/unstick-keys.py compares the held modifier
@@ -289,6 +330,9 @@ if command -v xdotool >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1 && [
   WATCH_PID=$!
 fi
 
+# Apps started from i3 (Chrome, VS Code, ...) use the same cursor
+CURSOR_ENV=()
+[[ -n "$CURSOR_THEME" ]] && CURSOR_ENV=(XCURSOR_THEME="$CURSOR_THEME" XCURSOR_SIZE="$CURSOR_SIZE")
 echo "==> Launching i3 (modifier is Alt; Alt+Enter = terminal, Alt+Shift+e = exit)"
 I3_ARGS=()
 # With several windows RandR reports only one monitor, so i3 must read the
@@ -296,8 +340,8 @@ I3_ARGS=()
 if [[ $WINDOWS -gt 1 ]]; then
   I3_ARGS=(--force-xinerama)
   # i3 warns about Xinerama on every start; here it's expected, so hide that line
-  { DISPLAY=":$DNUM" WAYLAND_DISPLAY= dbus-launch --exit-with-session i3 "${I3_ARGS[@]}" 2>&1; } |
+  { DISPLAY=":$DNUM" WAYLAND_DISPLAY= env "${CURSOR_ENV[@]}" dbus-launch --exit-with-session i3 "${I3_ARGS[@]}" 2>&1; } |
     { grep -v --line-buffered 'Using Xinerama instead of RandR' || true; }
 else
-  DISPLAY=":$DNUM" WAYLAND_DISPLAY= dbus-launch --exit-with-session i3
+  DISPLAY=":$DNUM" WAYLAND_DISPLAY= env "${CURSOR_ENV[@]}" dbus-launch --exit-with-session i3
 fi

@@ -92,6 +92,19 @@ The config lives in the repo as [config/i3/config](config/i3/config), organised 
 - Press **Ctrl+Shift** inside the window to grab the keyboard so Alt shortcuts go to i3. Press it again to release.
 - Closing the window or exiting i3 (Alt+Shift+e) stops everything.
 
+### How the window looks
+
+Before i3 draws anything, the script gives the window a normal arrow cursor (Adwaita) instead of X's big cross, fills it with your theme's background colour instead of black, and turns on smooth, anti-aliased fonts. Apps you open from i3 use the same cursor. You can change these:
+
+```bash
+./start-i3-wslg.sh full                    # no Windows title bar or frame at all
+./start-i3-wslg.sh --dpi 120               # bigger text: 96 is normal, 120 = 125%, 144 = 150%
+I3_TITLE="Linux" ./start-i3-wslg.sh        # window title (default "i3 (WSL)")
+I3_CURSOR_SIZE=32 ./start-i3-wslg.sh       # bigger cursor; I3_CURSOR_THEME=DMZ-White picks another theme
+```
+
+The title bar and frame around the window come from Windows (WSLg), so they can't be styled; `full` removes them. Inside the window, the look comes from i3: colour themes (`./set-theme.sh`), polybar, and a wallpaper (`./install-i3-tools.sh --wallpaper IMAGE`).
+
 ## Option 2: full screen with a Windows X server
 
 1. On Windows, start your X server:
