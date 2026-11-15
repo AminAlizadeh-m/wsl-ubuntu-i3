@@ -21,6 +21,7 @@
 #        ./start-i3-wslg.sh 2560x1440 2
 set -euo pipefail
 
+SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
 MODE="auto"; DNUM="1"; MONITOR=""; LIST=0; WINDOWS=1; DPI="${I3_DPI:-}"
 pos=0
 while [[ $# -gt 0 ]]; do
@@ -135,6 +136,11 @@ if display_alive; then
 fi
 clean_stale
 
+# i3-fit (Alt+Shift+f) writes this file to ask for a restart that fits the
+# windows to the monitors; see the end of this script.
+RELAUNCH="${XDG_RUNTIME_DIR:-/tmp}/wsl-i3-relaunch-$DNUM"
+rm -f "$RELAUNCH"
+
 TITLE="${I3_TITLE:-i3 (WSL)}"
 # The title as a regular expression, to find the window(s) with xdotool
 TITLE_RE="^$(printf '%s' "$TITLE" | sed 's/[][\.*^$()+?{}|]/\\&/g')\$"
@@ -180,6 +186,20 @@ if [[ $WINDOWS -eq 1 ]]; then
 else
   [[ -n "$MONITOR" ]] && echo "    (--monitor is ignored with --windows: windows are spread over your monitors.)"
   mapfile -t MONS < <(list_monitors | awk '$4 == 1'; list_monitors | awk '$4 != 1')
+  # Restarted by Alt+Shift+f: keep each window on the monitor it was moved to
+  # (I3_WSL_PLACE = monitor number per window), if they're all on different ones.
+  if [[ -n "${I3_WSL_PLACE:-}" ]]; then
+    read -ra place <<<"$I3_WSL_PLACE"
+    picked=()
+    if [[ ${#place[@]} -eq $WINDOWS && $(printf '%s\n' "${place[@]}" | sort -u | wc -l) -eq $WINDOWS ]]; then
+      for n in "${place[@]}"; do
+        line="$(list_monitors | awk -v n="$n" '$1 == n {print; exit}')"
+        [[ -n "$line" ]] && picked+=("$line")
+      done
+    fi
+    [[ ${#picked[@]} -eq $WINDOWS ]] && MONS=("${picked[@]}")
+  fi
+  unset I3_WSL_PLACE
   [[ ${#MONS[@]} -eq 0 ]] && MONS=("1 $MON_SIZE ? 1 0 0")
   XARGS=(); WIN_X=(); WIN_Y=(); WIN_FULL=(); DESC=()
   for ((k = 0; k < WINDOWS; k++)); do
@@ -346,7 +366,21 @@ if [[ $WINDOWS -gt 1 ]]; then
   I3_ARGS=(--force-xinerama)
   # i3 warns about Xinerama on every start; here it's expected, so hide that line
   { DISPLAY=":$DNUM" WAYLAND_DISPLAY= env "${CURSOR_ENV[@]}" dbus-launch --exit-with-session i3 "${I3_ARGS[@]}" 2>&1; } |
-    { grep -v --line-buffered 'Using Xinerama instead of RandR' || true; }
+    { grep -v --line-buffered 'Using Xinerama instead of RandR' || true; } || true
 else
-  DISPLAY=":$DNUM" WAYLAND_DISPLAY= env "${CURSOR_ENV[@]}" dbus-launch --exit-with-session i3
+  DISPLAY=":$DNUM" WAYLAND_DISPLAY= env "${CURSOR_ENV[@]}" dbus-launch --exit-with-session i3 || true
+fi
+
+# Alt+Shift+f with --windows: i3-fit left a request and quit i3. Start again,
+# fullscreen on the monitors the windows are on now. (The layout of several
+# windows is fixed when Xephyr starts, so it can't be resized in place.)
+if [[ -f "$RELAUNCH" ]]; then
+  PLACE="$(head -1 "$RELAUNCH")"
+  rm -f "$RELAUNCH"
+  kill $WATCH_PID 2>/dev/null || true
+  kill "$XPID" 2>/dev/null && wait "$XPID" 2>/dev/null || true
+  clean_stale || true
+  trap - EXIT
+  echo "==> Restarting i3 to fit your monitors"
+  I3_WSL_PLACE="$PLACE" exec "$SELF" full "$DNUM" --windows "$WINDOWS" ${DPI:+--dpi "$DPI"}
 fi

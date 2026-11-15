@@ -3,6 +3,10 @@
 # the Windows monitor it's on, so i3 resizes to that monitor. Handy after you
 # drag the window to another monitor. Press again to get a normal window back.
 #
+# With --windows N the layout is fixed when Xephyr starts, so instead it asks,
+# then restarts i3 fullscreen on the monitors the windows are on now (open apps
+# close). "i3-fit --restart" skips the question.
+#
 # Runs inside i3; start-i3-wslg.sh tells it (through environment variables)
 # which display is WSLg's and what the window is called.
 set -uo pipefail
@@ -18,9 +22,12 @@ if [[ -z "$HOST" ]]; then
   say "Only works when i3 was started with start-i3-wslg.sh (option 1)."
   exit 1
 fi
-if [[ "${I3_WSL_WINDOWS:-1}" != 1 ]]; then
-  say "Not available with --windows: that layout is fixed when i3 starts."
-  exit 1
+WINDOWS="${I3_WSL_WINDOWS:-1}"
+if [[ "$WINDOWS" != 1 && "${1:-}" != "--restart" ]]; then
+  i3-nagbar -t warning \
+    -m 'Fit the i3 windows to your monitors? i3 restarts, so open apps close.' \
+    -B 'Yes, restart i3' "$(readlink -f "$0") --restart" >/dev/null 2>&1 &
+  exit 0
 fi
 command -v xdotool >/dev/null 2>&1 || { say "Needs xdotool: sudo apt install xdotool"; exit 1; }
 
@@ -32,30 +39,48 @@ sleep 0.3
 host() { DISPLAY="$HOST" "$@"; }
 xdotool() { DISPLAY="$HOST" command xdotool "$@"; }
 regex="^$(printf '%s' "$TITLE" | sed 's/[][\.*^$()+?{}|]/\\&/g')\$"
-id="$(xdotool search --name "$regex" 2>/dev/null | head -1)"
-if [[ -z "$id" ]]; then
+# Xephyr creates its windows in screen order, so sorted ids = window 1, 2, ...
+mapfile -t ids < <(xdotool search --name "$regex" 2>/dev/null | sort -n)
+if [[ ${#ids[@]} -eq 0 ]]; then
   say "Couldn't find the i3 window on $HOST."
   exit 1
 fi
+id="${ids[0]}"
 
-# Where is the window now? (its centre decides the monitor)
-eval "$(xdotool getwindowgeometry --shell "$id" 2>/dev/null)"
-cx=$(( ${X:-0} + ${WIDTH:-0} / 2 )); cy=$(( ${Y:-0} + ${HEIGHT:-0} / 2 ))
-
-# Monitors as "WIDTH HEIGHT X Y", from lines like " 0: +*rdp-0 1920/518x1200/324+0+0  rdp-0"
+# Monitors as "WIDTH HEIGHT X Y", from lines like " 0: +*rdp-0 1920/518x1200/324+0+0  rdp-0".
+# Line k (from 1) is monitor k in start-i3-wslg.sh --monitors.
 mapfile -t mons < <(host xrandr --listmonitors 2>/dev/null |
   awk 'NR > 1 { split($3, a, /[\/x+]/); print a[1], a[3], a[5] + 0, a[6] + 0 }')
-mon=""
-for m in "${mons[@]}"; do
-  read -r mw mh mx my <<<"$m"
-  if (( cx >= mx && cx < mx + mw && cy >= my && cy < my + mh )); then mon="$m"; break; fi
-done
-[[ -z "$mon" ]] && mon="${mons[0]:-}"
-if [[ -z "$mon" ]]; then
+if [[ ${#mons[@]} -eq 0 ]]; then
   say "Couldn't read the monitor layout from WSLg."
   exit 1
 fi
-read -r mw mh mx my <<<"$mon"
+
+# monitor_of <window id>: number (from 1) of the monitor holding the window's centre
+monitor_of() {
+  local X Y WIDTH HEIGHT SCREEN WINDOW cx cy k mw mh mx my
+  eval "$(xdotool getwindowgeometry --shell "$1" 2>/dev/null)"
+  cx=$(( ${X:-0} + ${WIDTH:-0} / 2 )); cy=$(( ${Y:-0} + ${HEIGHT:-0} / 2 ))
+  for k in "${!mons[@]}"; do
+    read -r mw mh mx my <<<"${mons[$k]}"
+    if (( cx >= mx && cx < mx + mw && cy >= my && cy < my + mh )); then echo $((k + 1)); return; fi
+  done
+  echo 1
+}
+
+# ---------------------------------------------------------------- several windows
+if [[ "$WINDOWS" != 1 ]]; then
+  place=()
+  for w in "${ids[@]}"; do place+=("$(monitor_of "$w")"); done
+  dnum="${NESTED#*:}"; dnum="${dnum%%.*}"
+  # start-i3-wslg.sh sees this file when i3 has quit, and starts again
+  printf '%s\n' "${place[*]}" > "${XDG_RUNTIME_DIR:-/tmp}/wsl-i3-relaunch-$dnum"
+  DISPLAY="$NESTED" i3-msg exit >/dev/null 2>&1
+  exit 0
+fi
+
+# ---------------------------------------------------------------- one window
+read -r mw mh mx my <<<"${mons[$(( $(monitor_of "$id") - 1 ))]}"
 
 is_fullscreen() { host xprop -id "$id" _NET_WM_STATE 2>/dev/null | grep -q _NET_WM_STATE_FULLSCREEN; }
 
