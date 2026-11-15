@@ -212,6 +212,17 @@ exec_always --no-startup-id ~/.config/polybar/launch.sh
 
 `launch.sh` starts one bar per monitor. The colours are at the top of `config.ini`. Don't combine this with `setup-polybar.sh`, which writes its own `~/.config/polybar/config.ini`.
 
+### Removing adi1090x/polybar-themes
+
+If you installed [polybar-themes](https://github.com/adi1090x/polybar-themes) (for example the hack theme) and don't want it anymore:
+
+```bash
+./uninstall-polybar-themes.sh                    # repo cloned at ~/polybar-themes
+./uninstall-polybar-themes.sh /path/to/the/clone # cloned somewhere else
+```
+
+It stops the theme's bars, removes the `launch.sh --<theme>` line from your i3 config (backing the file up first), deletes the themes from `~/.config/polybar` and puts back the `~/.config/polybar.old` that the theme's `setup.sh` saved. It also removes the fonts it copied into `~/.local/share/fonts`, using the clone to know which ones; your other fonts stay. It asks before deleting the clone. polybar itself stays installed.
+
 ## Apps: Chrome, VS Code, Fortinet VPN
 
 ```bash
