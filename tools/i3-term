@@ -3,6 +3,17 @@
 # Uses Alacritty if it's installed, with software rendering because the i3
 # window and RDP have no GPU. Falls back to xterm if Alacritty can't start.
 # Why Alacritty didn't start is written to ~/.cache/i3-term.log.
+#
+# The shell: zsh if it's installed and set up (~/.zshrc), else your login
+# shell. $SHELL isn't trusted: i3 inherits it from the terminal that started
+# i3, which still says bash if that was opened before switching to zsh.
+login_shell="$(getent passwd "$(id -un)" | cut -d: -f7)"
+if command -v zsh >/dev/null 2>&1 && [ -f "$HOME/.zshrc" ]; then
+  SHELL="$(command -v zsh)"
+elif [ -n "$login_shell" ] && [ -x "$login_shell" ]; then
+  SHELL="$login_shell"
+fi
+export SHELL
 LOG="${XDG_CACHE_HOME:-$HOME/.cache}/i3-term.log"
 why=""
 mkdir -p "$(dirname "$LOG")" 2>/dev/null
