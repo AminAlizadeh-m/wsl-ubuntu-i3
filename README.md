@@ -38,7 +38,7 @@ chmod +x *.sh
 ./i3-wsl.sh theme [NAME]         # switch colour theme (see below)
 ./i3-wsl.sh polybar [OPTIONS]    # nicer i3: polybar, autotiling, picom
 ./i3-wsl.sh tools                # autotiling, i3lock, feh, dunst (see below)
-./i3-wsl.sh chrome               # Google Chrome (also: vscode, openfortivpn)
+./i3-wsl.sh chrome               # Google Chrome (also: vscode, openfortivpn, throne)
 ./i3-wsl.sh certs "CA NAME"      # trust a Windows CA (company network, see below)
 ./i3-wsl.sh uninstall [--yes]    # remove everything
 ```
@@ -255,20 +255,38 @@ If you installed [polybar-themes](https://github.com/adi1090x/polybar-themes) (f
 
 It stops the theme's bars, removes the `launch.sh --<theme>` line from your i3 config (backing the file up first), deletes the themes from `~/.config/polybar` and puts back the `~/.config/polybar.old` that the theme's `setup.sh` saved. It also removes the fonts it copied into `~/.local/share/fonts`, using the clone to know which ones; your other fonts stay. It asks before deleting the clone. polybar itself stays installed.
 
-## Apps: Chrome, VS Code, Fortinet VPN
+## Apps: Chrome, VS Code, Fortinet VPN, Throne
 
 ```bash
 ./install-chrome.sh         # Google Chrome
 ./install-vscode.sh         # Visual Studio Code
 ./install-openfortivpn.sh   # openfortivpn, a Fortinet SSL VPN client
+./install-throne.sh         # Throne, a proxy client (sing-box)
 ```
 
-They're also in the `i3-wsl.sh` menu (options 9–11). Chrome and VS Code come from Google's and Microsoft's official apt repositories, so `sudo apt upgrade` keeps them up to date. In i3, open them with **Alt+d** (type `chrome` or `code`).
+They're also in the `i3-wsl.sh` menu (options 9–12). Chrome and VS Code come from Google's and Microsoft's official apt repositories, so `sudo apt upgrade` keeps them up to date. In i3, open them with **Alt+d** (type `chrome` or `code`).
 
 - **Chrome:** only available for 64-bit Intel/AMD machines; on others, use `sudo apt install chromium`. If it shows a black window, start it with `google-chrome --disable-gpu`.
 - **VS Code:** the script turns off hardware acceleration in `~/.vscode/argv.json`, because the i3 window and RDP have no graphics card acceleration. If you also have VS Code on Windows, typing `code` in WSL now opens this Linux version instead.
 - **Links and sign-ins open in Linux Chrome:** inside i3, links that apps open (for example VS Code's **Sign in with GitHub**) go to Chrome in i3, not to your Windows browser. That's needed for sign-ins: the browser has to hand the result back to the Linux VS Code. Outside i3, links from the WSL terminal still open on Windows. This works when i3 is started by `start-i3-wslg.sh` or `start-i3-windows-xserver.sh`, or over xrdp after running `setup-xrdp.sh` again. With no Linux Chrome or Chromium installed, links keep opening on Windows.
 - **openfortivpn:** the script creates `~/.config/openfortivpn/config`, readable only by you. Fill in `host` and `username`, then connect with `sudo openfortivpn -c ~/.config/openfortivpn/config` and disconnect with Ctrl+C. Leave the password out to be asked each time. On the first connection it may print the server's certificate fingerprint; add it as `trusted-cert` once your IT team confirms it. The VPN covers WSL and the apps in i3, not Windows itself.
+
+### Throne
+
+`install-throne.sh` downloads the latest Throne `.deb` from its GitHub releases, checks its checksum and installs it. Running it again updates Throne. Open it in i3 with **Alt+d**, "Throne".
+
+- **No GitHub access?** Download `Throne-<version>-debian-amd64.deb` yourself and run `./install-throne.sh --deb FILE.deb`.
+- **Proxy for WSL programs:** Throne's "system proxy" switch doesn't reach WSL programs. Install with `--tun` and turn on TUN mode in Throne, or point programs at Throne's port (Settings > Inbound, 2080 by default): `export http_proxy=http://127.0.0.1:2080 https_proxy=http://127.0.0.1:2080`. After a Throne update, run `--tun` again.
+- **Move your settings from another computer** (profiles, subscriptions, routing, all options):
+
+  ```bash
+  ./throne-config.sh export                 # on the old system: ~/throne-config-DATE.tar.gz
+  ./throne-config.sh import FILE.tar.gz     # in WSL (or: ./install-throne.sh --config FILE.tar.gz)
+  ./throne-config.sh import /mnt/c/.../Throne   # straight from a Windows Throne folder
+  ```
+
+  Export works while Throne is running. Import closes Throne and keeps your current settings as `~/.config/Throne.bak.DATE`. The backup holds your proxy servers and passwords: it's readable only by you, and git ignores it. Don't share it.
+- **Uninstall:** `./uninstall-throne.sh` removes Throne completely: the package, `/opt/Throne`, `/etc/throne`, its services and launchers, and the `throne://` link handler. It asks before deleting your settings, and offers to save a backup first. `--keep-config` keeps them; `--yes` deletes them after saving a backup.
 
 ## Company network: trust a Windows CA certificate
 
@@ -284,7 +302,7 @@ Some company networks re-sign HTTPS traffic with their own CA. Windows trusts th
 - **Chrome and VS Code** keep their own list (`~/.pki/nssdb`), so the certificate is added there too. Restart them afterwards.
 - **Node and Python** use their own lists as well. Point them at Ubuntu's in `~/.zshrc`: `export NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt` and `export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt`.
 
-It's also option 12 in the `i3-wsl.sh` menu.
+It's also option 13 in the `i3-wsl.sh` menu.
 
 ## Uninstall
 

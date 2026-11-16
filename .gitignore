@@ -1,2 +1,4 @@
 __pycache__/
 *.pyc
+# Throne settings backups (proxy servers and passwords)
+throne-config-*.tar.gz

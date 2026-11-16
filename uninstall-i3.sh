@@ -36,7 +36,7 @@ ZSH_PKGS=(zsh zsh-autosuggestions zsh-syntax-highlighting alacritty fonts-jetbra
 
 to_remove=()
 
-# 00. Apps: Google Chrome, VS Code, openfortivpn (install-*.sh)
+# 00. Apps: Google Chrome, VS Code, openfortivpn, Throne (install-*.sh)
 if [[ -n "$(installed google-chrome-stable)" ]] && ask "Remove Google Chrome?"; then
   to_remove+=(google-chrome-stable)
   sudo rm -f /etc/apt/sources.list.d/google-chrome.list /etc/apt/sources.list.d/google-chrome.sources
@@ -49,6 +49,13 @@ if [[ -n "$(installed code)" ]] && ask "Remove VS Code (Linux version)?"; then
 fi
 if [[ -n "$(installed openfortivpn)" ]] && ask "Remove openfortivpn (your settings in ~/.config/openfortivpn are kept)?"; then
   to_remove+=(openfortivpn)
+fi
+if { [[ -n "$(installed throne)" ]] || [[ -d /opt/Throne ]]; } && ask "Remove Throne (proxy client)?"; then
+  if [[ $YES -eq 1 ]]; then
+    "$(dirname "$0")/uninstall-throne.sh" --yes
+  else
+    "$(dirname "$0")/uninstall-throne.sh"
+  fi
 fi
 
 # 0. autotiling, i3lock, feh, dunst (install-i3-tools.sh)
