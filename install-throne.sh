@@ -10,7 +10,8 @@
 #   ./install-throne.sh --config BACKUP      also bring in your Throne settings
 #                                            (made with ./throne-config.sh export,
 #                                            or a Throne folder, e.g. from Windows)
-#   ./install-throne.sh --tun                let TUN mode work without root
+#   ./install-throne.sh --tun                let TUN mode work in your own Throne
+#                                            (no need to start Throne as root)
 #   ./install-throne.sh --root --config BACKUP
 #                                            put the settings in root's Throne,
 #                                            the one Alt+Shift+d starts (it has
@@ -31,7 +32,7 @@ while [[ $# -gt 0 ]]; do
     --config) CONFIG="${2:?--config needs a backup file or folder}"; shift ;;
     --tun)    TUN=1 ;;
     --root)   ROOT=1 ;;
-    -h|--help) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "Unknown option: $1 (see --help)" >&2; exit 1 ;;
   esac
   shift
@@ -112,13 +113,22 @@ if [[ -n "$DEB" ]]; then
   sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-downgrades "$(readlink -f "$DEB")"
 fi
 
-# TUN mode routes all traffic through Throne; its core needs the right to
-# create network interfaces. (An update replaces the file: run --tun again.)
+# TUN mode routes all traffic through Throne, so its core must run as root.
+# Throne itself only accepts a core that runs as root (file capabilities
+# aren't enough), and its own fix asks through pkexec, which has no password
+# window in WSL. So do what Throne would do: make the core setuid root.
+# (An update replaces the file: run --tun again.)
 if [[ $TUN -eq 1 ]]; then
-  echo "==> Allowing TUN mode"
-  command -v setcap >/dev/null || sudo apt-get install -y libcap2-bin
-  sudo setcap cap_net_admin,cap_net_raw,cap_net_bind_service+ep /opt/Throne/ThroneCore
+  echo "==> Allowing TUN mode (ThroneCore runs as root)"
+  core=/opt/Throne/ThroneCore
+  [[ -f "$core" ]] || { echo "    $core is missing; is Throne installed?" >&2; exit 1; }
+  sudo setcap -r "$core" 2>/dev/null || true   # from older versions of this script
+  sudo chown root:root "$core"
+  sudo chmod u+s "$core"
   [[ -e /dev/net/tun ]] || echo "    /dev/net/tun is missing, so TUN mode won't work in this WSL."
+  if pgrep -x Throne >/dev/null; then
+    echo "    Quit Throne completely and start it again: it checks this only at start."
+  fi
 fi
 
 if [[ -n "$CONFIG" ]]; then

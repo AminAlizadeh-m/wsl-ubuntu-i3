@@ -277,7 +277,7 @@ They're also in the `i3-wsl.sh` menu (options 9–12). Chrome and VS Code come f
 
 - **A specific version:** `./install-throne.sh --version 1.2.0`, e.g. to match your other computer (`dpkg-query -W throne` shows its version). It can also go back to an older version.
 - **No GitHub access?** Download `Throne-<version>-debian-amd64.deb` yourself and run `./install-throne.sh --deb FILE.deb`.
-- **Proxy for WSL programs:** Throne's "system proxy" switch doesn't reach WSL programs. Install with `--tun` and turn on TUN mode in Throne, or point programs at Throne's port (Settings > Inbound, 2080 by default): `export http_proxy=http://127.0.0.1:2080 https_proxy=http://127.0.0.1:2080`. After a Throne update, run `--tun` again.
+- **Proxy for WSL programs:** Throne's "system proxy" switch doesn't reach WSL programs. Install with `--tun` and turn on TUN mode in Throne, or point programs at Throne's port (Settings > Inbound, 2080 by default): `export http_proxy=http://127.0.0.1:2080 https_proxy=http://127.0.0.1:2080`. `--tun` makes Throne's core (`/opt/Throne/ThroneCore`) run as root, as Throne's own "give the core root privileges" button would; that button doesn't work in WSL because it needs a password window (pkexec). Quit and restart Throne afterwards, and run `--tun` again after a Throne update.
 - **Move your settings from another computer** (profiles, subscriptions, routing, all options):
 
   ```bash
