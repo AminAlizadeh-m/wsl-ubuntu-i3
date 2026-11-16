@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 # Remove Throne completely: the program, its system files and services, its
-# launchers and link handler, and (after asking) your settings.
+# launchers and link handler, and (after asking) the settings: yours and
+# root's (the Throne you start as root with Alt+Shift+d keeps its own
+# settings in /root).
 #
-#   ./uninstall-throne.sh                 asks before deleting your settings
-#   ./uninstall-throne.sh --keep-config   keep ~/.config/Throne
+#   ./uninstall-throne.sh                 asks before deleting settings
+#   ./uninstall-throne.sh --keep-config   keep the settings (yours and root's)
 #   ./uninstall-throne.sh --yes           no questions; settings are deleted,
-#                                         but a backup is saved first
+#                                         but backups are saved first
+# Running it with sudo works too.
 set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -14,15 +17,10 @@ for a in "$@"; do
   case "$a" in
     --yes|-y)      YES=1 ;;
     --keep-config) KEEP=1 ;;
-    -h|--help)     sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help)     sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "Unknown option: $a (see --help)" >&2; exit 1 ;;
   esac
 done
-
-if [[ $EUID -eq 0 ]]; then
-  echo "Run this as your normal user (it uses sudo where needed)." >&2
-  exit 1
-fi
 
 ask() {  # ask "question" [default y|n]
   [[ $YES -eq 1 ]] && return 0
@@ -32,73 +30,102 @@ ask() {  # ask "question" [default y|n]
   [[ "$reply" =~ ^[Yy] ]]
 }
 
-CFG="$HOME/.config/Throne"
+# Your user and home, also when run with sudo
+if [[ $EUID -eq 0 ]]; then
+  USR="${SUDO_USER:-}"
+  [[ "$USR" == root ]] && USR=""
+else
+  USR="$USER"
+fi
+UHOME=""
+[[ -n "$USR" ]] && UHOME="$(getent passwd "$USR" | cut -d: -f6)"
+
+# as_root CMD / as_user CMD: run a command as root or as you
+as_root() { if [[ $EUID -eq 0 ]]; then "$@"; else sudo "$@"; fi; }
+as_user() { if [[ $EUID -eq 0 ]]; then sudo -u "$USR" "$@"; else "$@"; fi; }
+# in_home HOME CMD: run CMD as the owner of HOME
+in_home() { local h="$1"; shift; if [[ "$h" == /root ]]; then as_root "$@"; else as_user "$@"; fi; }
+
+echo "==> sudo is needed (enter your Linux password if asked)"
+as_root true
+
+# The homes with Throne files: yours and root's
+homes=()
+for h in "$UHOME" /root; do
+  [[ -n "$h" ]] || continue
+  if in_home "$h" sh -c 'for p in "$1"/.config/Throne "$1"/.config/Throne.bak.* "$1"/.cache/Throne \
+       "$1"/.local/share/applications/throne-url-handler.desktop "$1"/.config/autostart/Throne.desktop; do
+       [ -e "$p" ] && exit 0; done; exit 1' _ "$h" 2>/dev/null; then
+    homes+=("$h")
+  fi
+done
 installed=0
 dpkg-query -W -f='${Status}' throne 2>/dev/null | grep -q "install ok installed" && installed=1
-leftovers=()
-for p in /opt/Throne /etc/throne /var/lib/throne "$CFG" \
-         "$HOME/.local/share/applications/throne-url-handler.desktop" \
-         "$HOME/.config/autostart/Throne.desktop"; do
-  [[ -e "$p" ]] && leftovers+=("$p")
-done
-if [[ $installed -eq 0 && ${#leftovers[@]} -eq 0 ]]; then
+if [[ $installed -eq 0 && ${#homes[@]} -eq 0 && ! -e /opt/Throne && ! -e /etc/throne ]] &&
+   ! as_root test -e /var/lib/throne; then
   echo "Throne isn't installed; nothing to do."
   exit 0
 fi
 
-# 1. Stop it
-if pgrep -x Throne >/dev/null || pgrep -x ThroneCore >/dev/null; then
+# 1. Stop it (yours and root's)
+if pgrep -x 'Throne|ThroneCore' >/dev/null; then
   echo "==> Closing Throne"
-  pkill -x Throne 2>/dev/null || true
+  as_root pkill -x Throne 2>/dev/null || true
   sleep 2
-  pkill -x ThroneCore 2>/dev/null || sudo pkill -x ThroneCore 2>/dev/null || true
+  as_root pkill -x ThroneCore 2>/dev/null || true
 fi
 if [[ -d /run/systemd/system ]]; then
-  sudo systemctl disable --now throne.service throne-web.service >/dev/null 2>&1 || true
+  as_root systemctl disable --now throne.service throne-web.service >/dev/null 2>&1 || true
 fi
 
-# 2. Your settings
-if [[ -d "$CFG" ]]; then
-  if [[ $KEEP -eq 1 ]]; then
-    echo "==> Keeping your settings in $CFG"
-  elif ask "Delete your Throne settings (profiles, subscriptions) in $CFG?"; then
-    if ask "Save a backup of them first?" y; then
-      "$DIR/throne-config.sh" export
+# 2. Settings, per home
+for h in "${homes[@]}"; do
+  if [[ "$h" == /root ]]; then who="root's"; rootopt=(--root); else who="your"; rootopt=(); fi
+  cfg="$h/.config/Throne"
+  if in_home "$h" test -d "$cfg"; then
+    if [[ $KEEP -eq 1 ]]; then
+      echo "==> Keeping $who settings in $cfg"
+    elif ask "Delete $who Throne settings (profiles, subscriptions) in $cfg?"; then
+      if ask "Save a backup of them first?" y; then
+        # The backup goes to your home either way
+        if [[ $EUID -eq 0 && -n "$USR" && "$h" != /root ]]; then
+          sudo -u "$USR" "$DIR/throne-config.sh" export
+        else
+          "$DIR/throne-config.sh" "${rootopt[@]}" export
+        fi
+      fi
+      in_home "$h" rm -rf "$cfg"
+      echo "==> Deleted $cfg"
+    else
+      echo "==> Keeping $who settings in $cfg"
     fi
-    rm -rf "$CFG"
-    echo "==> Deleted $CFG"
-  else
-    echo "==> Keeping your settings in $CFG"
   fi
-fi
-# Backups made by throne-config.sh import
-shopt -s nullglob
-old=("$CFG".bak.*)
-shopt -u nullglob
-if [[ ${#old[@]} -gt 0 && $KEEP -eq 0 ]] &&
-   ask "Delete ${#old[@]} older settings backup(s) ($(basename "${old[0]}")...)?"; then
-  rm -rf "${old[@]}"
+  # Backups made by throne-config.sh import
+  mapfile -t old < <(in_home "$h" find "$h/.config" -maxdepth 1 -name 'Throne.bak.*' 2>/dev/null)
+  if [[ ${#old[@]} -gt 0 && $KEEP -eq 0 ]] &&
+     ask "Delete ${#old[@]} older backup(s) of $who settings ($(basename "${old[0]}")...)?"; then
+    in_home "$h" rm -rf "${old[@]}"
+  fi
+  # Launchers, autostart entry, throne:// link handler, cache
+  in_home "$h" rm -rf "$h/.local/share/applications/throne-url-handler.desktop" \
+    "$h/.config/autostart/Throne.desktop" "$h/.cache/Throne"
+  for m in "$h/.config/mimeapps.list" "$h/.local/share/applications/mimeapps.list"; do
+    in_home "$h" sed -i '/x-scheme-handler\/throne=/d' "$m" 2>/dev/null || true
+  done
+done
+if [[ -n "$UHOME" ]] && command -v update-desktop-database >/dev/null; then
+  as_user update-desktop-database "$UHOME/.local/share/applications" 2>/dev/null || true
 fi
 
 # 3. The program (purge also removes /etc/throne and the menu entry)
 if [[ $installed -eq 1 ]]; then
   echo "==> Removing the Throne package"
-  sudo apt-get purge -y throne
+  as_root apt-get purge -y throne
 fi
 # Files left behind by a failed install, the headless service's data, or a
 # hand-unpacked copy in /opt
-sudo rm -rf /opt/Throne /etc/throne /var/lib/throne
-sudo rm -f /usr/share/applications/Throne.desktop
-
-# 4. Your launchers, autostart entry and throne:// link handler
-rm -f "$HOME/.local/share/applications/throne-url-handler.desktop" \
-      "$HOME/.config/autostart/Throne.desktop"
-for m in "$HOME/.config/mimeapps.list" "$HOME/.local/share/applications/mimeapps.list"; do
-  [[ -f "$m" ]] && sed -i '/x-scheme-handler\/throne=/d' "$m"
-done
-command -v update-desktop-database >/dev/null &&
-  update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
-rm -rf "$HOME/.cache/Throne"
+as_root rm -rf /opt/Throne /etc/throne /var/lib/throne
+as_root rm -f /usr/share/applications/Throne.desktop
 
 echo "==> Throne is removed"
 if [[ -n "${http_proxy:-}${https_proxy:-}" ]]; then

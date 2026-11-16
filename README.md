@@ -275,6 +275,7 @@ They're also in the `i3-wsl.sh` menu (options 9–12). Chrome and VS Code come f
 
 `install-throne.sh` downloads the latest Throne `.deb` from its GitHub releases, checks its checksum and installs it. Running it again updates Throne. Open it in i3 with **Alt+d**, "Throne".
 
+- **A specific version:** `./install-throne.sh --version 1.2.0`, e.g. to match your other computer (`dpkg-query -W throne` shows its version). It can also go back to an older version.
 - **No GitHub access?** Download `Throne-<version>-debian-amd64.deb` yourself and run `./install-throne.sh --deb FILE.deb`.
 - **Proxy for WSL programs:** Throne's "system proxy" switch doesn't reach WSL programs. Install with `--tun` and turn on TUN mode in Throne, or point programs at Throne's port (Settings > Inbound, 2080 by default): `export http_proxy=http://127.0.0.1:2080 https_proxy=http://127.0.0.1:2080`. After a Throne update, run `--tun` again.
 - **Move your settings from another computer** (profiles, subscriptions, routing, all options):
@@ -285,8 +286,10 @@ They're also in the `i3-wsl.sh` menu (options 9–12). Chrome and VS Code come f
   ./throne-config.sh import /mnt/c/.../Throne   # straight from a Windows Throne folder
   ```
 
-  Export works while Throne is running. Import closes Throne and keeps your current settings as `~/.config/Throne.bak.DATE`. The backup holds your proxy servers and passwords: it's readable only by you, and git ignores it. Don't share it.
-- **Uninstall:** `./uninstall-throne.sh` removes Throne completely: the package, `/opt/Throne`, `/etc/throne`, its services and launchers, and the `throne://` link handler. It asks before deleting your settings, and offers to save a backup first. `--keep-config` keeps them; `--yes` deletes them after saving a backup.
+  Export works while Throne is running. Import closes Throne and keeps your current settings as `~/.config/Throne.bak.DATE`.
+
+  **Throne as root:** started with **Alt+Shift+d** (for TUN mode), Throne runs with root's home and so has its own settings in `/root/.config/Throne`, separate from yours. Add `--root` to work with those: `./install-throne.sh --root --config FILE.tar.gz`, `./throne-config.sh --root import FILE.tar.gz` or `./throne-config.sh --root export`. (Instead of running it as root, you can also install with `--tun` and use one Throne with your own settings.) The backup holds your proxy servers and passwords: it's readable only by you, and git ignores it. Don't share it.
+- **Uninstall:** `./uninstall-throne.sh` removes Throne completely: the package, `/opt/Throne`, `/etc/throne`, its services and launchers, and the `throne://` link handler. It asks before deleting the settings, yours and root's, and offers to save a backup of each first. `--keep-config` keeps them; `--yes` deletes them after saving a backup.
 
 ## Company network: trust a Windows CA certificate
 

@@ -2,34 +2,41 @@
 # Install Throne, a GUI proxy client (sing-box), from its GitHub releases.
 #
 #   ./install-throne.sh                      latest release
+#   ./install-throne.sh --version 1.2.0      a specific release (e.g. the one
+#                                            on your other computer:
+#                                            dpkg-query -W throne shows it)
 #   ./install-throne.sh --deb FILE.deb       a .deb you downloaded yourself
 #                                            (when GitHub can't be reached)
 #   ./install-throne.sh --config BACKUP      also bring in your Throne settings
 #                                            (made with ./throne-config.sh export,
 #                                            or a Throne folder, e.g. from Windows)
 #   ./install-throne.sh --tun                let TUN mode work without root
+#   ./install-throne.sh --root --config BACKUP
+#                                            put the settings in root's Throne,
+#                                            the one Alt+Shift+d starts (it has
+#                                            its own settings in /root)
 #
-# Open it in i3 with Alt+d, "Throne". Undo with ./uninstall-throne.sh.
+# Open it in i3 with Alt+d, "Throne" (as root: Alt+Shift+d). Running this
+# with sudo is the same as --root. Undo with ./uninstall-throne.sh.
 set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_API="https://api.github.com/repos/throneproj/Throne/releases/latest"
-DEB=""; CONFIG=""; TUN=0
+REPO_API="https://api.github.com/repos/throneproj/Throne/releases"
+VERSION=""; DEB=""; CONFIG=""; TUN=0; ROOT=0
+[[ $EUID -eq 0 ]] && ROOT=1
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --deb)    DEB="${2:?--deb needs a file}"; shift ;;
+    --version) VERSION="${2:?--version needs a version, e.g. 1.2.0}"; shift ;;
     --config) CONFIG="${2:?--config needs a backup file or folder}"; shift ;;
     --tun)    TUN=1 ;;
-    -h|--help) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --root)   ROOT=1 ;;
+    -h|--help) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "Unknown option: $1 (see --help)" >&2; exit 1 ;;
   esac
   shift
 done
 
-if [[ $EUID -eq 0 ]]; then
-  echo "Run this as your normal user (it uses sudo where needed)." >&2
-  exit 1
-fi
 [[ -z "$CONFIG" || -e "$CONFIG" ]] || { echo "Not found: $CONFIG" >&2; exit 1; }
 
 TMP="$(mktemp -d)"
@@ -41,8 +48,16 @@ if [[ -z "$DEB" ]]; then
     amd64|arm64) ;;
     *) echo "Throne has no Linux build for $arch." >&2; exit 1 ;;
   esac
-  echo "==> Looking up the latest Throne release"
-  if ! curl -fsSL --max-time 20 "$REPO_API" -o "$TMP/release.json"; then
+  if [[ -n "$VERSION" ]]; then
+    [[ "$VERSION" =~ ^[0-9A-Za-z._-]+$ ]] || { echo "Bad version: $VERSION" >&2; exit 1; }
+    echo "==> Looking up Throne $VERSION"
+    api="$REPO_API/tags/$VERSION"
+  else
+    echo "==> Looking up the latest Throne release"
+    api="$REPO_API/latest"
+  fi
+  if ! curl -fsSL --max-time 20 "$api" -o "$TMP/release.json"; then
+    [[ -n "$VERSION" ]] && echo "    No release $VERSION (or GitHub can't be reached); versions: https://github.com/throneproj/Throne/releases" >&2
     echo "    Can't reach GitHub. If it's a certificate error, see ./import-windows-certs.sh." >&2
     echo "    Or download Throne-<version>-debian-$arch.deb from" >&2
     echo "    https://github.com/throneproj/Throne/releases and run: $0 --deb FILE" >&2
@@ -60,7 +75,7 @@ for a in rel.get("assets", []):
 PY
   ) || true
   if [[ -z "${url:-}" ]]; then
-    echo "    No Debian package for $arch in the latest release." >&2; exit 1
+    echo "    No Debian package for $arch in release ${VERSION:-latest}." >&2; exit 1
   fi
   current="$(dpkg-query -W -f='${Version}' throne 2>/dev/null || true)"
   if [[ "$current" == "$version" ]]; then
@@ -84,15 +99,17 @@ if [[ -n "$DEB" ]]; then
     *) echo "$DEB isn't a Throne package." >&2; exit 1 ;;
   esac
   # A running Throne keeps the old files busy
+  # (yours and root's)
   if pgrep -x Throne >/dev/null; then
     echo "==> Closing Throne for the update"
-    pkill -x Throne || true; sleep 2; pkill -x ThroneCore 2>/dev/null || true
+    sudo pkill -x Throne || true; sleep 2; sudo pkill -x ThroneCore 2>/dev/null || true
   fi
   echo "==> Installing $(basename "$DEB")"
   # apt needs a path with a slash to treat it as a file
   [[ "$DEB" == */* ]] || DEB="./$DEB"
   sudo apt-get update -qq || true
-  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "$(readlink -f "$DEB")"
+  # --allow-downgrades: installing an older version on purpose (--version)
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-downgrades "$(readlink -f "$DEB")"
 fi
 
 # TUN mode routes all traffic through Throne; its core needs the right to
@@ -105,13 +122,18 @@ if [[ $TUN -eq 1 ]]; then
 fi
 
 if [[ -n "$CONFIG" ]]; then
-  "$DIR/throne-config.sh" import "$CONFIG"
+  if [[ $ROOT -eq 1 ]]; then
+    "$DIR/throne-config.sh" --root import "$CONFIG"
+  else
+    "$DIR/throne-config.sh" import "$CONFIG"
+  fi
 fi
 
 cat <<'EOF'
 
-Throne is installed. In i3 press Alt+d and type "Throne" (or run
-/opt/Throne/Throne -appdata in a terminal).
+Throne is installed. In i3 press Alt+d and type "Throne" (Alt+Shift+d to
+run it as root), or run /opt/Throne/Throne -appdata in a terminal.
+Root's Throne keeps its own settings: ./throne-config.sh --root import FILE
 
 Throne's "system proxy" switch doesn't reach WSL programs. Either turn on
 TUN mode (install with --tun), or point programs at Throne's port

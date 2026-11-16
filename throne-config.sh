@@ -7,6 +7,9 @@
 #   ./throne-config.sh import SOURCE   load settings from SOURCE: a file made
 #                                      by export, or a Throne folder (e.g. a
 #                                      Windows one: /mnt/c/.../Throne)
+#   --root (before export/import)      root's settings instead of yours: the
+#                                      Throne you start as root (Alt+Shift+d)
+#                                      keeps separate settings in /root
 #
 # Export works while Throne is running. Import closes Throne first and keeps
 # your current settings as ~/.config/Throne.bak.DATE.
@@ -15,10 +18,28 @@
 # you. Don't put it in git or share it.
 set -euo pipefail
 
+usage() { sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; }
+
+# --root: run this script as root, with root's home. The backup file still
+# goes to your home and belongs to you.
+if [[ "${1:-}" == --root ]]; then
+  shift
+  if [[ $EUID -ne 0 ]]; then
+    exec sudo env HOME=/root THRONE_OWNER="$USER" THRONE_OWNER_HOME="$HOME" \
+      PATH="$PATH" bash "$0" "$@"
+  fi
+  export HOME=/root
+fi
+OWNER="${THRONE_OWNER:-${SUDO_USER:-}}"
+OWNER_HOME="${THRONE_OWNER_HOME:-}"
+if [[ -z "$OWNER_HOME" && -n "$OWNER" ]]; then
+  OWNER_HOME="$(getent passwd "$OWNER" | cut -d: -f6)"
+fi
+OWNER_HOME="${OWNER_HOME:-$HOME}"
+WHO=""; [[ $EUID -eq 0 ]] && WHO="root-"
+
 CFG="$HOME/.config/Throne"
 umask 077
-
-usage() { sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; }
 
 # copy_snapshot SRC_CONFIG_DIR DEST_DIR: copy a Throne "config" folder.
 # The SQLite databases are copied with SQLite's backup, so a running Throne
@@ -56,7 +77,8 @@ find_config_dir() {
 cmd="${1:-}"; shift || true
 case "$cmd" in
   export)
-    out="${1:-$HOME/throne-config-$(date +%Y%m%d-%H%M%S).tar.gz}"
+    out="${1:-$OWNER_HOME/throne-config-$WHO$(date +%Y%m%d-%H%M%S).tar.gz}"
+    [[ -n "${1:-}" || ! -e "$out" ]] || out="${out%.tar.gz}-$$.tar.gz"
     src="$(find_config_dir "$CFG")" || { echo "No Throne settings found in $CFG" >&2; exit 1; }
     command -v python3 >/dev/null || { echo "python3 is needed: sudo apt install python3" >&2; exit 1; }
     tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
@@ -69,10 +91,11 @@ case "$cmd" in
     done
     tar -czf "$out" -C "$tmp" Throne
     chmod 600 "$out"
+    [[ $EUID -eq 0 && -n "$OWNER" ]] && chown "$OWNER:" "$out"
     echo "==> Saved $out ($(du -h "$out" | cut -f1))"
     echo "    It contains your proxy servers and passwords: keep it private."
     echo "    Copy it to the other system, then run there:"
-    echo "      ./throne-config.sh import $(basename "$out")"
+    echo "      ./throne-config.sh ${WHO:+--root }import $(basename "$out")"
     ;;
 
   import)
@@ -98,11 +121,13 @@ case "$cmd" in
       new="$tmp/new"
     fi
 
-    if pgrep -x Throne >/dev/null; then
+    # Only the Throne using these settings (yours, or root's with --root)
+    me="$(id -u)"
+    if pgrep -x -u "$me" Throne >/dev/null; then
       echo "==> Closing Throne (it would overwrite the imported settings)"
-      pkill -x Throne || true
-      for _ in 1 2 3 4 5; do pgrep -x Throne >/dev/null || break; sleep 1; done
-      pkill -x ThroneCore 2>/dev/null || true
+      pkill -x -u "$me" Throne || true
+      for _ in 1 2 3 4 5; do pgrep -x -u "$me" Throne >/dev/null || break; sleep 1; done
+      pkill -x -u "$me" ThroneCore 2>/dev/null || true
     fi
     if [[ -d "$CFG" ]]; then
       bak="$CFG.bak.$(date +%Y%m%d-%H%M%S)"
@@ -113,7 +138,11 @@ case "$cmd" in
     mkdir -p "$(dirname "$CFG")"
     cp -a "$new" "$CFG"
     chmod -R go-rwx "$CFG"
-    echo "==> Imported. Start Throne (Alt+d, \"Throne\") to use them."
+    if [[ $EUID -eq 0 ]]; then
+      echo "==> Imported into root's settings. Start Throne as root (Alt+Shift+d, \"Throne\")."
+    else
+      echo "==> Imported. Start Throne (Alt+d, \"Throne\") to use them."
+    fi
     ;;
 
   -h|--help|help|"") usage ;;
