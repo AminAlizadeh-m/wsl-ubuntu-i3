@@ -289,19 +289,20 @@ They're also in the `i3-wsl.sh` menu (options 9–12). Chrome and VS Code come f
   Export works while Throne is running. Import closes Throne and keeps your current settings as `~/.config/Throne.bak.DATE`.
 
   **Throne as root:** started with **Alt+Shift+d** (for TUN mode), Throne runs with root's home and so has its own settings in `/root/.config/Throne`, separate from yours. Add `--root` to work with those: `./install-throne.sh --root --config FILE.tar.gz`, `./throne-config.sh --root import FILE.tar.gz` or `./throne-config.sh --root export`. (Instead of running it as root, you can also install with `--tun` and use one Throne with your own settings.) The backup holds your proxy servers and passwords: it's readable only by you, and git ignores it. Don't share it.
-- **All of Ubuntu through Throne, without TUN:** start Throne, connect a profile, then:
+- **All of Ubuntu through Throne, without TUN, with a kill switch:**
 
   ```bash
-  ./throne-proxy.sh on       # or: ./i3-wsl.sh proxy on
+  ./throne-proxy.sh on          # or: ./i3-wsl.sh proxy on
   ./throne-proxy.sh status
-  ./throne-proxy.sh off
+  ./throne-proxy.sh off         # --quit also closes Throne
   ```
 
-  `on` first checks that Throne's proxy (port 2080; `--port N` for another) reaches the internet. Then it:
-  - sets `http_proxy`, `https_proxy` and `all_proxy` for new terminals and the apps started from them (i3, Chrome, VS Code), through a marked block in `~/.zshrc` and `~/.bashrc`. They only apply while Throne is listening, so closing Throne doesn't break anything;
-  - redirects all other TCP traffic, from every program and user, to Throne with iptables and redsocks, and sends DNS to Throne's DNS server. QUIC (UDP 443) is blocked so browsers use TCP. Other UDP and IPv6 aren't covered, and neither are programs running as root (`sudo curl`), because Throne's core runs as root and its own traffic must not be redirected.
+  `on` starts Throne in the tray if it isn't running and waits until it has connected. For that, turn on **Remember last proxy** in Throne's menu and connect your profile once; Throne then reconnects by itself. `on` checks that the connection reaches the internet, and only then:
+  - sets `http_proxy`, `https_proxy` and `all_proxy` for new terminals and the apps started from them (i3, Chrome, VS Code), through a marked block in `~/.zshrc` and `~/.bashrc`. They only apply while Throne is listening;
+  - redirects all other TCP traffic, from every program and user, to Throne with iptables and redsocks, and sends DNS to Throne's DNS server;
+  - turns on a **kill switch**: nothing may leave the machine except Throne's own connections, so when Throne or your server is down there's no internet, rather than an unprotected direct one. Your LAN and Windows stay reachable, and sites that Throne's routing sends "direct" still work. `--no-kill-switch` leaves it out; `--env-only` only sets the proxy settings (and apt's).
 
-  The redirect needs Throne's core to run as root: run `./install-throne.sh --tun` once and restart Throne. Without that, or with `--env-only`, only programs that use proxy settings go through Throne, plus apt. After restarting WSL, run `on` again.
+  Throne's own traffic is recognised by a group, `throne-proxy`, which `on` sets on `/opt/Throne/ThroneCore` (again after a Throne update, restarting Throne if needed). It uses your own Throne (Alt+d), not root's. The port is 2080; pass `--port N` if yours differs. After restarting WSL, run `on` again: the redirect and the kill switch don't survive a restart.
 - **Uninstall:** `./uninstall-throne.sh` removes Throne completely: the package, `/opt/Throne`, `/etc/throne`, its services and launchers, and the `throne://` link handler. It asks before deleting the settings, yours and root's, and offers to save a backup of each first. `--keep-config` keeps them; `--yes` deletes them after saving a backup.
 
 ## Company network: trust a Windows CA certificate

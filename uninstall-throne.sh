@@ -133,6 +133,8 @@ fi
 # hand-unpacked copy in /opt
 as_root rm -rf /opt/Throne /etc/throne /var/lib/throne
 as_root rm -f /usr/share/applications/Throne.desktop
+# The group throne-proxy.sh gives Throne's core
+getent group throne-proxy >/dev/null && { as_root groupdel throne-proxy 2>/dev/null || true; }
 
 echo "==> Throne is removed"
 if [[ -n "${http_proxy:-}${https_proxy:-}" ]]; then
