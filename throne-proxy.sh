@@ -141,15 +141,27 @@ connect() {
     start_throne
   fi
   echo "==> Waiting for Throne to connect"
-  for _ in $(seq 1 40); do
+  for _ in $(seq 1 20); do
     listening "$PORT" && core_running_ok && return 0
     sleep 1
   done
   if ! listening "$PORT"; then
-    echo "    Throne is running but hasn't connected (nothing on port $PORT)." >&2
-    echo "    Open it from the tray, start your profile, and turn on" >&2
-    echo "    \"Remember last proxy\" in its menu so it connects by itself next time." >&2
-    echo "    If your proxy port isn't 2080, pass it with --port." >&2
+    # Not connected by itself: show Throne's window (starting it again only
+    # brings the running one to the front) and let you connect there.
+    echo "    Throne didn't connect by itself. In the Throne window that opens now:"
+    echo "      1. turn on \"Remember last proxy\" (in its menu)"
+    echo "      2. start your profile"
+    echo "    Waiting up to 3 minutes..."
+    (cd "$HOME" && PATH="/opt/Throne:$PATH" setsid "$THRONE" -appdata >/dev/null 2>&1 </dev/null &)
+    for _ in $(seq 1 180); do
+      listening "$PORT" && core_running_ok && {
+        echo "    Connected. Next time: quit Throne with its own Exit (not by closing"
+        echo "    the window), so it remembers the profile and connects by itself."
+        return 0; }
+      sleep 1
+    done
+    echo "    Still not connected (nothing on port $PORT). If Throne's proxy port" >&2
+    echo "    isn't 2080 (Settings > Inbound), pass it with --port." >&2
   else
     echo "    Throne's core doesn't run with the $GROUP group; quit Throne fully and try again." >&2
   fi
