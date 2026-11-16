@@ -67,6 +67,13 @@ if [[ $installed -eq 0 && ${#homes[@]} -eq 0 && ! -e /opt/Throne && ! -e /etc/th
   exit 0
 fi
 
+# 0. Undo throne-proxy.sh (it would send traffic to a Throne that's gone)
+if [[ -n "$UHOME" ]] && { [[ -f "$UHOME/.config/throne-proxy.env" ]] ||
+     [[ -f /etc/apt/apt.conf.d/95throne-proxy ]] || [[ -d /etc/throne-proxy ]]; }; then
+  echo "==> Turning off throne-proxy.sh"
+  as_user env HOME="$UHOME" "$DIR/throne-proxy.sh" off >/dev/null || true
+fi
+
 # 1. Stop it (yours and root's)
 if pgrep -x 'Throne|ThroneCore' >/dev/null; then
   echo "==> Closing Throne"

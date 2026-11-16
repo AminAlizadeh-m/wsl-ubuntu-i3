@@ -11,6 +11,7 @@
 #   ./i3-wsl.sh polybar [OPTIONS]    polybar, autotiling, picom (--no-polybar, --no-picom)
 #   ./i3-wsl.sh tools                autotiling, i3lock, feh, dunst (undo: ./uninstall-i3-tools.sh)
 #   ./i3-wsl.sh chrome | vscode | openfortivpn | throne   install that app
+#   ./i3-wsl.sh proxy on|off|status   all traffic through Throne's proxy (no TUN)
 #   ./i3-wsl.sh certs "CA NAME"      trust a Windows CA (company proxy); --help for more
 #   ./i3-wsl.sh uninstall [--yes]    remove everything again
 set -euo pipefail
@@ -39,10 +40,11 @@ run_method() {
     vscode)  exec "$DIR/install-vscode.sh" ;;
     openfortivpn) exec "$DIR/install-openfortivpn.sh" ;;
     throne)  exec "$DIR/install-throne.sh" "$@" ;;
+    proxy)   exec "$DIR/throne-proxy.sh" "$@" ;;
     certs)   exec "$DIR/import-windows-certs.sh" "$@" ;;
     uninstall) exec "$DIR/uninstall-i3.sh" "$@" ;;
-    -h|--help|help) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//' ;;
-    *) echo "Unknown method: $method (use install, wslg, xserver, xrdp, zsh, theme, polybar, tools, chrome, vscode, openfortivpn, throne, certs or uninstall)" >&2; exit 1 ;;
+    -h|--help|help) sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//' ;;
+    *) echo "Unknown method: $method (use install, wslg, xserver, xrdp, zsh, theme, polybar, tools, chrome, vscode, openfortivpn, throne, proxy, certs or uninstall)" >&2; exit 1 ;;
   esac
 }
 
