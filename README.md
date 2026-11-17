@@ -305,6 +305,25 @@ They're also in the `i3-wsl.sh` menu (options 9–12). Chrome and VS Code come f
   Throne's own traffic is recognised by a group, `throne-proxy`, which `on` sets on `/opt/Throne/ThroneCore` (the core also runs as root, as with `--tun`) (again after a Throne update, restarting Throne if needed). It uses your own Throne (Alt+d), not root's. The port is 2080; pass `--port N` if yours differs. After restarting WSL, run `on` again: the redirect and the kill switch don't survive a restart.
 - **Uninstall:** `./uninstall-throne.sh` removes Throne completely: the package, `/opt/Throne`, `/etc/throne`, its services and launchers, and the `throne://` link handler. It asks before deleting the settings, yours and root's, and offers to save a backup of each first. `--keep-config` keeps them; `--yes` deletes them after saving a backup.
 
+## VLESS in TUN mode, without Throne (sing-box)
+
+`vless-tun.sh` connects to a VLESS server with [sing-box](https://github.com/SagerNet/sing-box) in TUN mode, so all of Ubuntu's traffic goes through the server: every program and user, UDP and DNS included.
+
+```bash
+./vless-tun.sh install                   # sing-box from its GitHub releases (checksum checked)
+./vless-tun.sh up 'vless://...'          # connect; the link is saved for next time
+./vless-tun.sh up --kill-switch          # saved link, no internet while disconnected
+./vless-tun.sh status                    # connected? your IP
+./vless-tun.sh down                      # disconnect
+```
+
+- **The link** goes in quotes (it contains `&` and `#`), or in a file: `./vless-tun.sh up link.txt`. It's saved to `~/.config/vless-tun/link`, readable only by you. Supported: security `none`, `tls` and `reality`, transports `tcp`, `ws`, `grpc`, `http` (h2) and `httpupgrade`, and `flow=xtls-rprx-vision`. sing-box has no `xhttp`.
+- **DNS:** while connected, `/etc/resolv.conf` points into the tunnel, and names are looked up over DNS-over-HTTPS through the server, so blocked sites get their real address. `down` puts the old file back. This also works with WSL's `dnsTunneling` on.
+- **Kill switch** (`--kill-switch`): until `down`, nothing may leave the machine except through the tunnel. If sing-box stops, there's no internet rather than an unprotected connection. Your LAN and Windows stay reachable.
+- **Problems:** `./vless-tun.sh log` follows sing-box's log; `./vless-tun.sh config` prints the generated config. After restarting WSL, run `up` again.
+- **Don't run it together with Throne's TUN mode** or `throne-proxy.sh`: they'd fight over the same traffic.
+- **Uninstall:** `./vless-tun.sh down`, then `sudo apt purge sing-box`.
+
 ## Company network: trust a Windows CA certificate
 
 Some company networks re-sign HTTPS traffic with their own CA. Windows trusts that CA, but Ubuntu doesn't, so `apt`, `curl`, `git` and `pip` fail with "certificate verify failed". This script copies the CA from Windows into Ubuntu:
