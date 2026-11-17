@@ -337,7 +337,7 @@ vless-proxy.cmd down                    :: disconnect, put your proxy settings b
 ```
 
 - **No TUN, no kill switch:** without admin rights Windows allows neither (TUN needs a network driver, a kill switch needs firewall rules). Instead sing-box runs as a local proxy on `127.0.0.1:2080` and is set as your Windows proxy, which is a per-user setting. Browsers and most apps use it, and so do new WSL sessions (WSL's `autoProxy`). Programs that ignore the Windows proxy go direct.
-- **The link:** in quotes, or saved in a text file (`vless-proxy.cmd up C:\path\link.txt`), which avoids problems with `%` and `&` in Command Prompt. Same link types as `vless-tun.sh`.
+- **The link:** easiest is to copy it and run `vless-proxy.cmd up clip`, which reads it from the clipboard. Typing it on the command line is fragile: from PowerShell, Command Prompt cuts the link at the first `&` even inside quotes. A text file works too: `vless-proxy.cmd up C:\path\link.txt`. Same link types as `vless-tun.sh`.
 - `down` restores the proxy settings you had before, including a company PAC file. If your company's policies reset proxy settings, they may undo the change; and if they block programs in your user folder, sing-box can't run.
 - **Uninstall:** `vless-proxy.cmd down`, then delete `%LOCALAPPDATA%\vless-proxy`.
 

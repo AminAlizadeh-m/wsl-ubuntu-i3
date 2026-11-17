@@ -105,6 +105,9 @@ if enc != "none": fail(f"encryption={enc} isn't supported by sing-box")
 out = {"type": "vless", "tag": "proxy", "server": server_ip or host,
        "server_port": port, "uuid": uuid, "packet_encoding": "xudp"}
 if q.get("flow"): out["flow"] = q["flow"]
+pe = q.get("packetEncoding", "")
+if pe == "none": out.pop("packet_encoding")
+elif pe in ("xudp", "packetaddr"): out["packet_encoding"] = pe
 
 net = (q.get("type") or "tcp").lower()
 path = q.get("path", "")

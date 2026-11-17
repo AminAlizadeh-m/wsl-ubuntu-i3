@@ -5,6 +5,7 @@ Connect to a VLESS server on Windows with sing-box, WITHOUT admin rights.
   vless-proxy.cmd up "vless://..."            connect (the link is saved)
   vless-proxy.cmd up                          connect with the saved link
   vless-proxy.cmd up C:\path\link.txt         the link from a file
+  vless-proxy.cmd up clip                     the link from the clipboard (easiest)
   vless-proxy.cmd down                        disconnect, restore your proxy settings
   vless-proxy.cmd status                      connected? which IP?
   vless-proxy.cmd log                         follow sing-box's log
@@ -49,6 +50,11 @@ function Write-Utf8($path, $text) {   # UTF-8 without BOM (sing-box can't read a
 # ------------------------------------------------------------------ link -> config
 function Get-TheLink {
   $l = $Link
+  if ($l -eq "clip") {   # the link from the clipboard: no quoting problems at all
+    $m = [regex]::Match(((Get-Clipboard) -join "`n"), 'vless://\S+')
+    if (-not $m.Success) { Fail "There's no vless:// link on the clipboard. Copy it first." }
+    $l = $m.Value
+  }
   if ($l -and -not $l.StartsWith("vless://") -and (Test-Path -LiteralPath $l)) {
     $m = Select-String -LiteralPath $l -Pattern 'vless://\S+' | Select-Object -First 1
     $l = if ($m) { $m.Matches[0].Value } else { "" }
@@ -92,6 +98,8 @@ function New-Config($l, $serverIp) {
   $out = [ordered]@{ type = "vless"; tag = "proxy"; server = $(if ($serverIp) { $serverIp } else { $P.host })
                      server_port = $P.port; uuid = $P.uuid; packet_encoding = "xudp" }
   $flow = QV $q "flow"; if ($flow) { $out.flow = $flow }
+  $pe = QV $q "packetEncoding"
+  if ($pe -eq "none") { $out.Remove("packet_encoding") } elseif ($pe -in "xudp", "packetaddr") { $out.packet_encoding = $pe }
 
   $net = (QV $q "type" "tcp").ToLower()
   $path = QV $q "path"; $thost = QV $q "host"
@@ -300,6 +308,10 @@ switch ($Command.ToLower()) {
 
   "up" {
     $l = Get-TheLink
+    if ($l -notmatch '[?&](security|type)=' -and $Link -and $Link -ne "clip") {
+      Say "    Note: this link has no security= or type=. If the full link has them, it was cut"
+      Say "    at an '&' on the way in. Copy the link and use: vless-proxy.cmd up clip"
+    }
     if (-not (Test-Path $Exe)) { Install-SingBox }
     New-Item -ItemType Directory -Force -Path $Dir | Out-Null
     [void](Stop-Tunnel)   # a previous connection
