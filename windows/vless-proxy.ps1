@@ -263,25 +263,29 @@ function Install-SingBox {
     if ($cur -match [regex]::Escape($ver)) { Say "==> sing-box $ver is already installed"; return }
   }
   New-Item -ItemType Directory -Force -Path $BinDir | Out-Null
-  $zip = Join-Path $env:TEMP $asset.name
+  # Downloads go next to sing-box, not to %TEMP%: with a dot in the user
+  # name (a.b), %TEMP% is a short 8.3 path that Remove-Item can't handle.
+  $dl = Join-Path $Dir "download"
+  New-Item -ItemType Directory -Force -Path $dl | Out-Null
+  $zip = Join-Path $dl $asset.name
   Say "==> Downloading sing-box $ver"
   $old = $ProgressPreference; $ProgressPreference = "SilentlyContinue"   # much faster
   Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zip -UseBasicParsing
   $ProgressPreference = $old
   if ($asset.digest -and $asset.digest.StartsWith("sha256:")) {
     $got = (Get-FileHash -Algorithm SHA256 -LiteralPath $zip).Hash.ToLower()
-    if ($got -ne $asset.digest.Substring(7).ToLower()) { Remove-Item $zip; Fail "The download is damaged (checksum mismatch)." }
+    if ($got -ne $asset.digest.Substring(7).ToLower()) { Remove-Item -LiteralPath $zip -Force; Fail "The download is damaged (checksum mismatch)." }
     Say "    Checksum OK"
   }
-  $tmp = Join-Path $env:TEMP "sing-box-$ver-extract"
-  Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
+  $tmp = Join-Path $dl "extract"
+  Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
   Expand-Archive -LiteralPath $zip -DestinationPath $tmp -Force
   $found = Get-ChildItem -Path $tmp -Recurse -Filter "sing-box.exe" | Select-Object -First 1
   if (-not $found) { Fail "sing-box.exe isn't in the download." }
   if (Get-Running (Read-State)) { Fail "Disconnect first (vless-proxy.cmd down), then install." }
   Copy-Item $found.FullName $Exe -Force
   Get-ChildItem -Path $found.DirectoryName -Filter "*.dll" | Copy-Item -Destination $BinDir -Force
-  Remove-Item $tmp -Recurse -Force; Remove-Item $zip -Force
+  Remove-Item -LiteralPath $dl -Recurse -Force -ErrorAction SilentlyContinue
   Say "==> sing-box $ver installed in $BinDir"
 }
 
