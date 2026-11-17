@@ -123,8 +123,14 @@ if [[ $TUN -eq 1 ]]; then
   core=/opt/Throne/ThroneCore
   [[ -f "$core" ]] || { echo "    $core is missing; is Throne installed?" >&2; exit 1; }
   sudo setcap -r "$core" 2>/dev/null || true   # from older versions of this script
-  sudo chown root:root "$core"
-  sudo chmod u+s "$core"
+  # Keep the group throne-proxy.sh gives the core, if it's in use
+  if getent group throne-proxy >/dev/null; then
+    sudo chown root:throne-proxy "$core"
+    sudo chmod u+s,g+s "$core"
+  else
+    sudo chown root:root "$core"
+    sudo chmod u+s "$core"
+  fi
   [[ -e /dev/net/tun ]] || echo "    /dev/net/tun is missing, so TUN mode won't work in this WSL."
   if pgrep -x Throne >/dev/null; then
     echo "    Quit Throne completely and start it again: it checks this only at start."

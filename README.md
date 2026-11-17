@@ -302,7 +302,7 @@ They're also in the `i3-wsl.sh` menu (options 9–12). Chrome and VS Code come f
   - redirects all other TCP traffic, from every program and user, to Throne with iptables and redsocks, and sends DNS to Throne's DNS server;
   - turns on a **kill switch**: nothing may leave the machine except Throne's own connections, so when Throne or your server is down there's no internet, rather than an unprotected direct one. Your LAN and Windows stay reachable, and sites that Throne's routing sends "direct" still work. `--no-kill-switch` leaves it out; `--env-only` only sets the proxy settings (and apt's).
 
-  Throne's own traffic is recognised by a group, `throne-proxy`, which `on` sets on `/opt/Throne/ThroneCore` (again after a Throne update, restarting Throne if needed). It uses your own Throne (Alt+d), not root's. The port is 2080; pass `--port N` if yours differs. After restarting WSL, run `on` again: the redirect and the kill switch don't survive a restart.
+  Throne's own traffic is recognised by a group, `throne-proxy`, which `on` sets on `/opt/Throne/ThroneCore` (the core also runs as root, as with `--tun`) (again after a Throne update, restarting Throne if needed). It uses your own Throne (Alt+d), not root's. The port is 2080; pass `--port N` if yours differs. After restarting WSL, run `on` again: the redirect and the kill switch don't survive a restart.
 - **Uninstall:** `./uninstall-throne.sh` removes Throne completely: the package, `/opt/Throne`, `/etc/throne`, its services and launchers, and the `throne://` link handler. It asks before deleting the settings, yours and root's, and offers to save a backup of each first. `--keep-config` keeps them; `--yes` deletes them after saving a backup.
 
 ## Company network: trust a Windows CA certificate

@@ -28,7 +28,8 @@
 #    reachable. Sites that Throne's own routing sends "direct" still work.
 #
 # Throne's core is told apart by a group (throne-proxy) set on
-# /opt/Throne/ThroneCore; "on" sets it up (again after a Throne update).
+# /opt/Throne/ThroneCore, which also runs as root (as with
+# install-throne.sh --tun); "on" sets it up (again after a Throne update).
 # After restarting WSL, run "on" again.
 set -euo pipefail
 
@@ -85,17 +86,17 @@ proxy_works() {
 }
 
 # ------------------------------------------------------------ Throne itself
-# Give the core the throne-proxy group (setgid), so its traffic can be told
-# apart from everything else. Prints "changed" if it had to change it.
+# Make the core run as root (setuid, as install-throne.sh --tun does) with
+# the throne-proxy group (setgid), so its traffic can be told apart from
+# everything else. It must be root too: the core checks which program
+# started it, and as a setgid-only program Linux won't let it look.
+# Prints "changed" if it had to change anything.
 core_group() {
   [[ -f "$CORE" ]] || { echo "Throne isn't installed: ./install-throne.sh" >&2; exit 1; }
   getent group "$GROUP" >/dev/null || sudo groupadd --system "$GROUP"
-  if [[ "$(stat -c %G "$CORE")" != "$GROUP" || ! -g "$CORE" ]]; then
-    local suid=0
-    [[ -u "$CORE" ]] && suid=1          # keep TUN permission (install-throne.sh --tun)
-    sudo chgrp "$GROUP" "$CORE"         # (this clears the setuid/setgid bits)
-    sudo chmod g+s "$CORE"
-    [[ $suid -eq 1 ]] && sudo chmod u+s "$CORE"
+  if [[ "$(stat -c %U:%G "$CORE")" != "root:$GROUP" || ! -u "$CORE" || ! -g "$CORE" ]]; then
+    sudo chown "root:$GROUP" "$CORE"    # (this clears the setuid/setgid bits)
+    sudo chmod u+s,g+s "$CORE"
     echo changed
   fi
 }
